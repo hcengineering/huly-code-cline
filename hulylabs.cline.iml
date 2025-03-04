@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/src/main/resources" type="java-resource" />
+      <sourceFolder url="file://$MODULE_DIR$/src/main/java" isTestSource="false" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="kotlin-stdlib" level="project" />
+    <orderEntry type="library" name="kotlinx-serialization-json" level="project" />
+    <orderEntry type="library" name="kotlinx-serialization-core" level="project" />
+    <orderEntry type="module" module-name="intellij.platform.core" />
+    <orderEntry type="module" module-name="intellij.platform.util" />
+    <orderEntry type="module-library">
+      <library name="caoccao.javet" type="repository">
+        <properties include-transitive-deps="false" maven-id="com.caoccao.javet:javet:4.1.1">
+          <verification>
+            <artifact url="file://$MAVEN_REPOSITORY$/com/caoccao/javet/javet/4.1.1/javet-4.1.1.jar">
+              <sha256sum>12cada993276832adcdcbe30bf1b33f6fb34fd3fc33ed90083e803bdb0dd8d68</sha256sum>
+            </artifact>
+          </verification>
+        </properties>
+        <CLASSES>
+          <root url="jar://$MAVEN_REPOSITORY$/com/caoccao/javet/javet/4.1.1/javet-4.1.1.jar!/" />
+        </CLASSES>
+        <JAVADOC>
+          <root url="jar://$MAVEN_REPOSITORY$/com/caoccao/javet/javet/4.1.1/javet-4.1.1-javadoc.jar!/" />
+        </JAVADOC>
+        <SOURCES>
+          <root url="jar://$MAVEN_REPOSITORY$/com/caoccao/javet/javet/4.1.1/javet-4.1.1-sources.jar!/" />
+        </SOURCES>
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library name="caoccao.javet.node.windows.x86_64.i18n" type="repository">
+        <properties include-transitive-deps="false" maven-id="com.caoccao.javet:javet-node-windows-x86_64-i18n:4.1.1">
+          <verification>
+            <artifact url="file://$MAVEN_REPOSITORY$/com/caoccao/javet/javet-node-windows-x86_64-i18n/4.1.1/javet-node-windows-x86_64-i18n-4.1.1.jar">
+              <sha256sum>e667c8c5d45185190cb5885cd954730f1be7ea3a2e48c462aaf422c5c789692f</sha256sum>
+            </artifact>
+          </verification>
+        </properties>
+        <CLASSES>
+          <root url="jar://$MAVEN_REPOSITORY$/com/caoccao/javet/javet-node-windows-x86_64-i18n/4.1.1/javet-node-windows-x86_64-i18n-4.1.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module" module-name="intellij.platform.credentialStore" />
+    <orderEntry type="module" module-name="intellij.platform.util.ex" />
+    <orderEntry type="module" module-name="intellij.platform.ide" />
+    <orderEntry type="module" module-name="intellij.platform.ui.jcef" />
+    <orderEntry type="module" module-name="intellij.platform.core.ui" />
+    <orderEntry type="module" module-name="intellij.platform.util.ui" />
+    <orderEntry type="module" module-name="intellij.platform.analysis" />
+  </component>
+</module>

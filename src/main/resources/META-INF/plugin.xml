@@ -1,0 +1,16 @@
+<idea-plugin>
+  <id>com.hulylabs.Cline</id>
+
+  <name>Huly-Code-Cline</name>
+
+  <vendor url="https://hulylabs.com/">Huly Labs</vendor>
+  <description>CLine (https://github.com/cline/cline) for Huly Code</description>
+
+  <depends>com.intellij.modules.platform</depends>
+  <depends>com.intellij.modules.lang</depends>
+  <extensions defaultExtensionNs="com.intellij">
+    <!--<postStartupActivity implementation="com.hulylabs.intellij.plugins.cline.AppStarter"/>-->
+    <toolWindow id="Cline" anchor="right" icon="/icons/panel_icon.svg"
+                factoryClass="com.hulylabs.intellij.plugins.cline.ClineToolWindowFactory"/>
+  </extensions>
+</idea-plugin>

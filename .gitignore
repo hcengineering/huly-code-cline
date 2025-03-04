@@ -1,0 +1,8 @@
+/nodejs/cline
+/nodejs/node_modules
+/nodejs/dist
+/src/main/resources/nodejs/runtime
+/build
+/.gradle
+/.intellijPlatform
+/src/main/resources/webview/static/
