@@ -1,5 +1,5 @@
 // Copyright © 2025 Huly Labs. Use of this source code is governed by the Apache 2.0 license.
-package com.hulylabs.intellij.plugins.cline
+package com.hulylabs.intellij.plugins.cline.nodejs
 
 import com.caoccao.javet.enums.V8AwaitMode
 import com.caoccao.javet.exceptions.JavetException
@@ -12,12 +12,13 @@ import com.caoccao.javet.node.modules.NodeModuleModule
 import com.caoccao.javet.node.modules.NodeModuleProcess
 import com.caoccao.javet.values.reference.V8ValueFunction
 import com.caoccao.javet.values.reference.V8ValueObject
-import com.hulylabs.intellij.plugins.cline.vscode.TerminalOptions
-import com.hulylabs.intellij.plugins.cline.vscode.WebviewView
+import com.hulylabs.intellij.plugins.cline.nodejs.cdt.CDTConfig
+import com.hulylabs.intellij.plugins.cline.nodejs.cdt.CDTHttpServlet
+import com.hulylabs.intellij.plugins.cline.nodejs.cdt.CDTWebSocketCreator
+import com.hulylabs.intellij.plugins.cline.nodejs.vscode.WebviewView
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.components.Service
-import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VfsUtil
@@ -26,6 +27,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.eclipse.jetty.server.Server
+import org.eclipse.jetty.servlet.ServletContextHandler
+import org.eclipse.jetty.websocket.server.NativeWebSocketServletContainerInitializer
+import org.eclipse.jetty.websocket.server.WebSocketUpgradeFilter
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -35,8 +40,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 import kotlin.io.path.exists
 
-private val LOG = Logger.getInstance("#cline-service")
-
 @Service(Service.Level.PROJECT)
 class ClineRuntimeService(
   private val project: Project,
@@ -45,6 +48,7 @@ class ClineRuntimeService(
 
   private val started = AtomicBoolean(false)
   private val runtimePath = Path.of(PathManager.getConfigPath(), "cline-runtime")
+  private val logger = ClineRuntimeLogger()
 
   private lateinit var nodeRuntime: NodeRuntime
   private lateinit var moduleObject: V8ValueObject
@@ -58,7 +62,7 @@ class ClineRuntimeService(
   }
 
   fun activate(browser: JBCefBrowser) {
-    LOG.info("Init runtime service")
+    logger.info("Init runtime service")
     scope.launch {
       prepareRuntime()
       thread = startRuntime(project, browser)
@@ -94,18 +98,37 @@ class ClineRuntimeService(
   private fun startRuntime(project: Project, browser: JBCefBrowser): Thread {
     return thread {
       started.set(true)
+      val inspectorServer: Server = Server(CDTConfig.port)
+      val inspectorServletContextHandler = ServletContextHandler(
+        ServletContextHandler.SESSIONS or ServletContextHandler.NO_SECURITY)
+      inspectorServletContextHandler.setContextPath(CDTConfig.PATH_ROOT)
+      inspectorServer.setHandler(inspectorServletContextHandler)
       try {
         NodeRuntimeOptions.NODE_FLAGS.setIcuDataDir(runtimePath.toString())
-        V8Host.getNodeI18nInstance().createV8Runtime<NodeRuntime>().use { nodeRuntime: NodeRuntime ->
+        val nodeRuntime = V8Host.getNodeI18nInstance().createV8Runtime<NodeRuntime>()
+        val bridge = HulyCodeBridge(project)
+        val webView = WebviewView(project, nodeRuntime, browser)
+        nodeRuntime.logger = logger
+
+        inspectorServletContextHandler.addServlet(CDTHttpServlet::class.java, CDTConfig.PATH_ROOT)
+        NativeWebSocketServletContainerInitializer.configure(inspectorServletContextHandler,
+                                                             { servletContext, nativeWebSocketConfiguration ->
+                                                               nativeWebSocketConfiguration.getPolicy().setMaxTextMessageBufferSize(0xFFFFFF)
+                                                               nativeWebSocketConfiguration.addMapping(
+                                                                 CDTConfig.PATH_JAVET,
+                                                                 CDTWebSocketCreator(nodeRuntime))
+                                                             })
+        WebSocketUpgradeFilter.configure(inspectorServletContextHandler)
+        inspectorServer.start()
+
+        try {
           nodeRuntime.getNodeModule(NodeModuleModule::class.java).setRequireRootDirectory(runtimePath.toFile())
           nodeRuntime.getNodeModule(NodeModuleProcess::class.java).workingDirectory = runtimePath.toFile()
-          val javetProxyConverter = JavetProxyConverter()
-          javetProxyConverter.registerCustomObject(TerminalOptions::class.java, "fromMap", "toMap")
-          nodeRuntime.converter = javetProxyConverter
-          val bridge = HulyCodeBridge(project)
-          val webview = WebviewView(project, nodeRuntime, browser)
+          val javetConverter = JavetProxyConverter()
+          //javetProxyConverter.registerCustomObject(TerminalOptions::class.java, "fromMap", "toMap")
+          nodeRuntime.converter = javetConverter
           nodeRuntime.globalObject.set("hulyCode", bridge)
-          nodeRuntime.globalObject.set("webview", webview)
+          nodeRuntime.globalObject.set("webview", webView)
           val module: NodeModuleAny? = nodeRuntime.getNodeModule<NodeModuleAny?>("./cline.js", NodeModuleAny::class.java)
           moduleObject = module!!.moduleObject
           moduleObject.setWeak()
@@ -124,16 +147,19 @@ class ClineRuntimeService(
               }
             }
           }
-          LOG.info("Destroy runtime service")
-          nodeRuntime.globalObject.delete("hulyCode")
-          nodeRuntime.globalObject.delete("webview")
-          moduleObject.close()
-          Disposer.dispose(bridge)
-          Disposer.dispose(webview)
         }
+        catch (ex: JavetException) {
+          ex.printStackTrace()
+        }
+        logger.info("Destroy runtime service")
+        nodeRuntime.globalObject.delete("hulyCode")
+        nodeRuntime.globalObject.delete("webview-cline")
+        moduleObject.close()
+        Disposer.dispose(bridge)
+        Disposer.dispose(webView)
       }
       catch (e: Exception) {
-        LOG.error("Cannot start cline runtime", e)
+        logger.error("Cannot start cline runtime", e)
       }
     }
   }

@@ -5,6 +5,7 @@ import com.hulylabs.intellij.plugins.cline.actions.NewTaskAction
 import com.hulylabs.intellij.plugins.cline.actions.OpenHistoryAction
 import com.hulylabs.intellij.plugins.cline.actions.OpenMCPServersAction
 import com.hulylabs.intellij.plugins.cline.actions.OpenSettingsAction
+import com.hulylabs.intellij.plugins.cline.nodejs.ClineRuntimeService
 import com.intellij.ide.ui.LafManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
@@ -70,7 +71,7 @@ class CustomResourceHandler : CefResourceHandler {
         return true
       }
       else {
-        val path = url.replace("http://hulycline", "/webview")
+        val path = url.replace("http://hulycline", "/webview-cline")
         val resource = CustomResourceHandler::class.java.getResource(path)
         if (resource != null) {
           myInputStream = resource.openStream()

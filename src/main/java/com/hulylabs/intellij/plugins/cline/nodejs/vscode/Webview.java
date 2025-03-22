@@ -1,12 +1,12 @@
 // Copyright © 2025 Huly Labs. Use of this source code is governed by the Apache 2.0 license.
-package com.hulylabs.intellij.plugins.cline.vscode;
+package com.hulylabs.intellij.plugins.cline.nodejs.vscode;
 
 import com.caoccao.javet.exceptions.JavetException;
 import com.caoccao.javet.interop.NodeRuntime;
 import com.caoccao.javet.values.V8Value;
 import com.caoccao.javet.values.reference.V8ValueFunction;
 import com.caoccao.javet.values.reference.V8ValueObject;
-import com.hulylabs.intellij.plugins.cline.ClineRuntimeService;
+import com.hulylabs.intellij.plugins.cline.nodejs.ClineRuntimeService;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
@@ -145,7 +145,7 @@ public class Webview implements Disposable {
   @Override
   public void dispose() {
     try {
-      if (!onDidReceiveMessageListener.isClosed()) {
+      if (onDidReceiveMessageListener != null && !onDidReceiveMessageListener.isClosed()) {
         onDidReceiveMessageListener.clearWeak();
       }
     }

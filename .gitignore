@@ -5,4 +5,4 @@
 /build
 /.gradle
 /.intellijPlatform
-/src/main/resources/webview/static/
+/src/main/resources/webview-cline/static/

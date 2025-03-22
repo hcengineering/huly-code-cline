@@ -500,7 +500,7 @@ export namespace window {
   //   }
 
   export function createTerminal(options: TerminalOptions): Terminal {
-    return new TerminalImpl();
+    return hulyCode.createTerminal(options);
   }
 
   // export function createTerminal(options: ExtensionTerminalOptions): Terminal;
@@ -1128,14 +1128,16 @@ export class ExtensionContext {
 
   readonly secrets: SecretStorage = {
     get: function(key: string): Thenable<string | undefined> {
-      return hulyCode.getSecret(key);
+      return Promise.resolve(hulyCode.getSecret(key));
     },
     store: function(key: string, value: string): Thenable<void> {
-      return hulyCode.storeSecret(key, value);
+      hulyCode.storeSecret(key, value);
+      return Promise.resolve();
     },
 
     delete: function(key: string): Thenable<void> {
-      return hulyCode.deleteSecret(key);
+      hulyCode.deleteSecret(key);
+      return Promise.resolve();
     }
   };
 

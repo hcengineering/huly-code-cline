@@ -1,7 +1,6 @@
 // Copyright © 2025 Huly Labs. Use of this source code is governed by the Apache 2.0 license.
-package com.hulylabs.intellij.plugins.cline.vscode
+package com.hulylabs.intellij.plugins.cline.nodejs.vscode
 
-import com.caoccao.javet.annotations.V8BindingEnabler
 import com.caoccao.javet.annotations.V8Convert
 import com.caoccao.javet.enums.V8ProxyMode
 import com.intellij.openapi.diagnostic.Logger

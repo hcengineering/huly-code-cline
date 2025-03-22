@@ -1,16 +1,8 @@
 // Copyright © 2025 Huly Labs. Use of this source code is governed by the Apache 2.0 license.
-package com.hulylabs.intellij.plugins.cline
+package com.hulylabs.intellij.plugins.cline.nodejs
 
-import com.caoccao.javet.annotations.V8Convert
-import com.caoccao.javet.annotations.V8Function
-import com.caoccao.javet.values.V8Value
-import com.hulylabs.intellij.plugins.cline.vscode.Extension
-import com.hulylabs.intellij.plugins.cline.vscode.Range
-import com.hulylabs.intellij.plugins.cline.vscode.Tab
-import com.hulylabs.intellij.plugins.cline.vscode.TabInputText
-import com.hulylabs.intellij.plugins.cline.vscode.Terminal
-import com.hulylabs.intellij.plugins.cline.vscode.TerminalOptions
-import com.hulylabs.intellij.plugins.cline.vscode.Uri
+import com.hulylabs.intellij.plugins.cline.ClineConfiguration
+import com.hulylabs.intellij.plugins.cline.nodejs.vscode.*
 import com.intellij.credentialStore.CredentialAttributes
 import com.intellij.credentialStore.Credentials
 import com.intellij.credentialStore.generateServiceName
@@ -36,12 +28,12 @@ class HulyCodeBridge internal constructor(private val project: Project) : Dispos
   val globalStoragePath: String
     get() {
       val path = PathManager.getConfigDir().resolve("cline")
-      LOG.info("getGlobalStoragePath: " + path)
+      LOG.info("getGlobalStoragePath: $path")
       return path.toString()
     }
 
   fun getSecret(key: String): String? {
-    LOG.info("getSecret key=" + key)
+    LOG.info("getSecret key=$key")
     val attributes = CredentialAttributes(
       generateServiceName("Cline", key)
     )
@@ -50,7 +42,7 @@ class HulyCodeBridge internal constructor(private val project: Project) : Dispos
   }
 
   fun storeSecret(key: String, value: String?) {
-    LOG.info("storeSecret key=" + key)
+    LOG.info("storeSecret key=$key")
     val attributes = CredentialAttributes(
       generateServiceName("Cline", key)
     )
@@ -59,17 +51,18 @@ class HulyCodeBridge internal constructor(private val project: Project) : Dispos
     passwordSafe.set(attributes, credentials, false)
   }
 
+  @JvmName("deleteSecret")
   fun deleteSecret(key: String) {
-    LOG.info("deleteSecret key=" + key)
+    LOG.info("deleteSecret key=$key")
     val passwordSafe = PasswordSafe.Companion.instance
     val attributes = CredentialAttributes(
       generateServiceName("Cline", key)
     )
-    passwordSafe.set(attributes, null, false)
+    passwordSafe[attributes, null] = false
   }
 
   fun getConfiguration(section: String?, key: String?): String? {
-    LOG.info("getConfiguration section=" + section + " key=" + key)
+    LOG.info("getConfiguration section=$section key=$key")
     if (section == "workbench") {
       if (key == "colorTheme") {
         val isDark = LafManager.getInstance().getCurrentUIThemeLookAndFeel().isDark
@@ -81,7 +74,7 @@ class HulyCodeBridge internal constructor(private val project: Project) : Dispos
         }
       }
     }
-    val fullKey = section + "." + key
+    val fullKey = "$section.$key"
     if (fullKey == "cline.enableCheckpoints") {
       return "true"
     }
@@ -89,17 +82,17 @@ class HulyCodeBridge internal constructor(private val project: Project) : Dispos
   }
 
   fun hasConfiguration(section: String?, key: String?): Boolean {
-    LOG.info("hasConfiguration section=" + section + " key=" + key)
+    LOG.info("hasConfiguration section=$section key=$key")
     return ClineConfiguration.Companion.getInstance().workspaceParams.containsKey(section + "." + key)
   }
 
   fun updateConfiguration(section: String?, key: String?, value: String?) {
-    LOG.info("updateConfiguration section=" + section + " key=" + key + " value=" + value)
+    LOG.info("updateConfiguration section=$section key=$key value=$value")
     ClineConfiguration.Companion.getInstance().workspaceParams.put(section + "." + key, value!!)
   }
 
   fun getExtension(extensionId: String?): Extension {
-    LOG.info("getExtension extensionId=" + extensionId)
+    LOG.info("getExtension extensionId=$extensionId")
     return Extension(Uri(""))
   }
 
@@ -109,12 +102,12 @@ class HulyCodeBridge internal constructor(private val project: Project) : Dispos
   }
 
   fun globalStateGet(key: String?): String? {
-    LOG.info("globalStateGet key=" + key)
+    LOG.info("globalStateGet key=$key")
     return ClineConfiguration.Companion.getInstance().globalParams.get(key)
   }
 
   fun globalStateUpdate(key: String?, value: String?) {
-    LOG.info("globalStateUpdate key=" + key + " value=" + value)
+    LOG.info("globalStateUpdate key=$key value=$value")
     if (value == null) {
       ClineConfiguration.Companion.getInstance().globalParams.remove(key)
     }
@@ -149,7 +142,7 @@ class HulyCodeBridge internal constructor(private val project: Project) : Dispos
   fun getVisibleTextEditors(): List<String> {
     LOG.info("getVisibleTextEditors")
     val editors = FileEditorManager.getInstance(project).allEditors
-    return editors.filter{ it.isValid }.map { it.file.path }
+    return editors.filter { it.isValid }.map { it.file.path }
   }
 
   fun setEditorDecorations(fsPath: String, key: String, rangesOrOptions: List<Range>) {
@@ -157,7 +150,7 @@ class HulyCodeBridge internal constructor(private val project: Project) : Dispos
   }
 
   fun createTerminal(options: HashMap<Any, Any>): Terminal? {
-    val terminalOptions = TerminalOptions.fromMap(options)
+    val terminalOptions = TerminalOptions.Companion.fromMap(options)
     LOG.info("createTerminal options=$options")
     return Terminal("cline", 0, terminalOptions)
   }
