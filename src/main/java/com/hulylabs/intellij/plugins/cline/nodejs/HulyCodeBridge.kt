@@ -1,8 +1,11 @@
 // Copyright © 2025 Huly Labs. Use of this source code is governed by the Apache 2.0 license.
 package com.hulylabs.intellij.plugins.cline.nodejs
 
+import com.caoccao.javet.interop.NodeRuntime
 import com.hulylabs.intellij.plugins.cline.ClineConfiguration
 import com.hulylabs.intellij.plugins.cline.nodejs.vscode.*
+import com.hulylabs.intellij.plugins.cline.nodejs.vscode.terminal.Terminal
+import com.hulylabs.intellij.plugins.cline.nodejs.vscode.terminal.TerminalOptions
 import com.intellij.credentialStore.CredentialAttributes
 import com.intellij.credentialStore.Credentials
 import com.intellij.credentialStore.generateServiceName
@@ -14,12 +17,22 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.util.ArrayUtil
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.plus
 
 private val LOG = Logger.getInstance("#cline")
 private val CLINE_LOG = Logger.getInstance("#cline_log")
 
 @Suppress("unused")
-class HulyCodeBridge internal constructor(private val project: Project) : Disposable {
+class HulyCodeBridge
+internal constructor(
+  private val project: Project,
+  private val nodeRuntime: NodeRuntime,
+) : Disposable {
+
+  private val scope = MainScope().plus(CoroutineName("HulyCodeBridge"))
+
   fun log(message: String?) {
     CLINE_LOG.info(message)
   }
@@ -27,7 +40,7 @@ class HulyCodeBridge internal constructor(private val project: Project) : Dispos
   //region Storage related
   val globalStoragePath: String
     get() {
-      val path = PathManager.getConfigDir().resolve("cline")
+      val path = PathManager.getSystemDir().resolve("cline")
       LOG.info("getGlobalStoragePath: $path")
       return path.toString()
     }
@@ -152,7 +165,7 @@ class HulyCodeBridge internal constructor(private val project: Project) : Dispos
   fun createTerminal(options: HashMap<Any, Any>): Terminal? {
     val terminalOptions = TerminalOptions.Companion.fromMap(options)
     LOG.info("createTerminal options=$options")
-    return Terminal("cline", 0, terminalOptions)
+    return Terminal(project, nodeRuntime, terminalOptions)
   }
 
   override fun dispose() {

@@ -56,88 +56,13 @@
     <orderEntry type="module" module-name="intellij.platform.core.ui" />
     <orderEntry type="module" module-name="intellij.platform.util.ui" />
     <orderEntry type="module" module-name="intellij.platform.analysis" />
-    <orderEntry type="module-library">
-      <library name="eclipse.jetty.websocket.server" type="repository">
-        <properties maven-id="org.eclipse.jetty.websocket:websocket-server:9.4.53.v20231009">
-          <verification>
-            <artifact url="file://$MAVEN_REPOSITORY$/org/eclipse/jetty/websocket/websocket-server/9.4.53.v20231009/websocket-server-9.4.53.v20231009.jar">
-              <sha256sum>c2f0fc5bffdd03e11fa5fe729861696b50f20b1c8922137e9eba9142c37c1773</sha256sum>
-            </artifact>
-            <artifact url="file://$MAVEN_REPOSITORY$/org/eclipse/jetty/websocket/websocket-common/9.4.53.v20231009/websocket-common-9.4.53.v20231009.jar">
-              <sha256sum>f0b77337d00f85b3fee0910286e724925cb78828952196648646873c47a7f58c</sha256sum>
-            </artifact>
-            <artifact url="file://$MAVEN_REPOSITORY$/org/eclipse/jetty/websocket/websocket-api/9.4.53.v20231009/websocket-api-9.4.53.v20231009.jar">
-              <sha256sum>a90b8ebd397edd214229c40b141213ce5dda9a8373e7e47b8b019a46a084e5af</sha256sum>
-            </artifact>
-            <artifact url="file://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-util/9.4.53.v20231009/jetty-util-9.4.53.v20231009.jar">
-              <sha256sum>7e5370022ecd1f682653641169a33e62e26730dd1e786433bed506cb0dcb1abc</sha256sum>
-            </artifact>
-            <artifact url="file://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-io/9.4.53.v20231009/jetty-io-9.4.53.v20231009.jar">
-              <sha256sum>779a91750a60957c613ce5013404269717c504c2b21f3a73145e81c3dc41c67f</sha256sum>
-            </artifact>
-            <artifact url="file://$MAVEN_REPOSITORY$/org/eclipse/jetty/websocket/websocket-client/9.4.53.v20231009/websocket-client-9.4.53.v20231009.jar">
-              <sha256sum>99de69d0dff50d3a128a428d8da6b82bdca81fb95813f618f4f9256db475b22c</sha256sum>
-            </artifact>
-            <artifact url="file://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-client/9.4.53.v20231009/jetty-client-9.4.53.v20231009.jar">
-              <sha256sum>9f5b83f64307bbb5d42dd4273e88d642214b275490363bac954369f029643c66</sha256sum>
-            </artifact>
-            <artifact url="file://$MAVEN_REPOSITORY$/org/eclipse/jetty/websocket/websocket-servlet/9.4.53.v20231009/websocket-servlet-9.4.53.v20231009.jar">
-              <sha256sum>6c6c26b6da021f755cf9768dc843cce1dcde328a95538605796eebd7bb206ee6</sha256sum>
-            </artifact>
-            <artifact url="file://$MAVEN_REPOSITORY$/javax/servlet/javax.servlet-api/3.1.0/javax.servlet-api-3.1.0.jar">
-              <sha256sum>af456b2dd41c4e82cf54f3e743bc678973d9fe35bd4d3071fa05c7e5333b8482</sha256sum>
-            </artifact>
-            <artifact url="file://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-servlet/9.4.53.v20231009/jetty-servlet-9.4.53.v20231009.jar">
-              <sha256sum>b0d372f7033b42ff72c3639d0da9c9fc0d84a89f548f0b8888716863424ed4b7</sha256sum>
-            </artifact>
-            <artifact url="file://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-security/9.4.53.v20231009/jetty-security-9.4.53.v20231009.jar">
-              <sha256sum>6d958d0065013e0a8d64b3e683d2301cf83de4a25d34552ad60714b6cbe2a7be</sha256sum>
-            </artifact>
-            <artifact url="file://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-server/9.4.53.v20231009/jetty-server-9.4.53.v20231009.jar">
-              <sha256sum>9c4e9c6cb0a7a541031500af0823b678f65d809f481efa9cadd1ff81bda19f78</sha256sum>
-            </artifact>
-            <artifact url="file://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-util-ajax/9.4.53.v20231009/jetty-util-ajax-9.4.53.v20231009.jar">
-              <sha256sum>c32c1e170615e366d90d92c1172588babc72ba31fdca85d84fa9172db26b73f4</sha256sum>
-            </artifact>
-            <artifact url="file://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-http/9.4.53.v20231009/jetty-http-9.4.53.v20231009.jar">
-              <sha256sum>c0a0cbd25998a13ce68481d6002757e6489ea0253463db761fec0cb30d15d612</sha256sum>
-            </artifact>
-          </verification>
-        </properties>
-        <CLASSES>
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/websocket/websocket-server/9.4.53.v20231009/websocket-server-9.4.53.v20231009.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/websocket/websocket-common/9.4.53.v20231009/websocket-common-9.4.53.v20231009.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/websocket/websocket-api/9.4.53.v20231009/websocket-api-9.4.53.v20231009.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-util/9.4.53.v20231009/jetty-util-9.4.53.v20231009.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-io/9.4.53.v20231009/jetty-io-9.4.53.v20231009.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/websocket/websocket-client/9.4.53.v20231009/websocket-client-9.4.53.v20231009.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-client/9.4.53.v20231009/jetty-client-9.4.53.v20231009.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/websocket/websocket-servlet/9.4.53.v20231009/websocket-servlet-9.4.53.v20231009.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/javax/servlet/javax.servlet-api/3.1.0/javax.servlet-api-3.1.0.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-servlet/9.4.53.v20231009/jetty-servlet-9.4.53.v20231009.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-security/9.4.53.v20231009/jetty-security-9.4.53.v20231009.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-server/9.4.53.v20231009/jetty-server-9.4.53.v20231009.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-util-ajax/9.4.53.v20231009/jetty-util-ajax-9.4.53.v20231009.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-http/9.4.53.v20231009/jetty-http-9.4.53.v20231009.jar!/" />
-        </CLASSES>
-        <JAVADOC>
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/websocket/websocket-server/9.4.53.v20231009/websocket-server-9.4.53.v20231009-javadoc.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/websocket/websocket-common/9.4.53.v20231009/websocket-common-9.4.53.v20231009-javadoc.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/websocket/websocket-api/9.4.53.v20231009/websocket-api-9.4.53.v20231009-javadoc.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-util/9.4.53.v20231009/jetty-util-9.4.53.v20231009-javadoc.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-io/9.4.53.v20231009/jetty-io-9.4.53.v20231009-javadoc.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/websocket/websocket-client/9.4.53.v20231009/websocket-client-9.4.53.v20231009-javadoc.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-client/9.4.53.v20231009/jetty-client-9.4.53.v20231009-javadoc.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/websocket/websocket-servlet/9.4.53.v20231009/websocket-servlet-9.4.53.v20231009-javadoc.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/javax/servlet/javax.servlet-api/3.1.0/javax.servlet-api-3.1.0-javadoc.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-servlet/9.4.53.v20231009/jetty-servlet-9.4.53.v20231009-javadoc.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-security/9.4.53.v20231009/jetty-security-9.4.53.v20231009-javadoc.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-server/9.4.53.v20231009/jetty-server-9.4.53.v20231009-javadoc.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-util-ajax/9.4.53.v20231009/jetty-util-ajax-9.4.53.v20231009-javadoc.jar!/" />
-          <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/jetty/jetty-http/9.4.53.v20231009/jetty-http-9.4.53.v20231009-javadoc.jar!/" />
-        </JAVADOC>
-        <SOURCES />
-      </library>
-    </orderEntry>
+    <orderEntry type="module" module-name="intellij.platform.execution.impl" />
+    <orderEntry type="module" module-name="intellij.terminal" />
+    <orderEntry type="library" name="jediterm-core" level="project" />
+    <orderEntry type="module" module-name="intellij.platform.execution" />
+    <orderEntry type="library" name="jediterm-ui" level="project" />
+    <orderEntry type="library" name="pty4j" level="project" />
+    <orderEntry type="module" module-name="intellij.platform.ide.impl" />
+    <orderEntry type="module" module-name="intellij.platform.core.impl" />
   </component>
 </module>

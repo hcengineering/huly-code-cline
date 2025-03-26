@@ -3,6 +3,7 @@ package com.hulylabs.intellij.plugins.cline.nodejs
 
 import com.caoccao.javet.enums.V8AwaitMode
 import com.caoccao.javet.exceptions.JavetException
+import com.caoccao.javet.exceptions.JavetExecutionException
 import com.caoccao.javet.interop.NodeRuntime
 import com.caoccao.javet.interop.V8Host
 import com.caoccao.javet.interop.converters.JavetProxyConverter
@@ -12,9 +13,6 @@ import com.caoccao.javet.node.modules.NodeModuleModule
 import com.caoccao.javet.node.modules.NodeModuleProcess
 import com.caoccao.javet.values.reference.V8ValueFunction
 import com.caoccao.javet.values.reference.V8ValueObject
-import com.hulylabs.intellij.plugins.cline.nodejs.cdt.CDTConfig
-import com.hulylabs.intellij.plugins.cline.nodejs.cdt.CDTHttpServlet
-import com.hulylabs.intellij.plugins.cline.nodejs.cdt.CDTWebSocketCreator
 import com.hulylabs.intellij.plugins.cline.nodejs.vscode.WebviewView
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.PathManager
@@ -27,13 +25,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.eclipse.jetty.server.Server
-import org.eclipse.jetty.servlet.ServletContextHandler
-import org.eclipse.jetty.websocket.server.NativeWebSocketServletContainerInitializer
-import org.eclipse.jetty.websocket.server.WebSocketUpgradeFilter
 import java.io.IOException
 import java.nio.file.Files
-import java.nio.file.Path
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -47,7 +40,7 @@ class ClineRuntimeService(
 ) : Disposable {
 
   private val started = AtomicBoolean(false)
-  private val runtimePath = Path.of(PathManager.getConfigPath(), "cline-runtime")
+  private val runtimePath = PathManager.getSystemDir().resolve("cline-runtime")
   private val logger = ClineRuntimeLogger()
 
   private lateinit var nodeRuntime: NodeRuntime
@@ -98,34 +91,16 @@ class ClineRuntimeService(
   private fun startRuntime(project: Project, browser: JBCefBrowser): Thread {
     return thread {
       started.set(true)
-      val inspectorServer: Server = Server(CDTConfig.port)
-      val inspectorServletContextHandler = ServletContextHandler(
-        ServletContextHandler.SESSIONS or ServletContextHandler.NO_SECURITY)
-      inspectorServletContextHandler.setContextPath(CDTConfig.PATH_ROOT)
-      inspectorServer.setHandler(inspectorServletContextHandler)
       try {
         NodeRuntimeOptions.NODE_FLAGS.setIcuDataDir(runtimePath.toString())
-        val nodeRuntime = V8Host.getNodeI18nInstance().createV8Runtime<NodeRuntime>()
-        val bridge = HulyCodeBridge(project)
+        nodeRuntime = V8Host.getNodeI18nInstance().createV8Runtime<NodeRuntime>()
+        val bridge = HulyCodeBridge(project, nodeRuntime)
         val webView = WebviewView(project, nodeRuntime, browser)
         nodeRuntime.logger = logger
-
-        inspectorServletContextHandler.addServlet(CDTHttpServlet::class.java, CDTConfig.PATH_ROOT)
-        NativeWebSocketServletContainerInitializer.configure(inspectorServletContextHandler,
-                                                             { servletContext, nativeWebSocketConfiguration ->
-                                                               nativeWebSocketConfiguration.getPolicy().setMaxTextMessageBufferSize(0xFFFFFF)
-                                                               nativeWebSocketConfiguration.addMapping(
-                                                                 CDTConfig.PATH_JAVET,
-                                                                 CDTWebSocketCreator(nodeRuntime))
-                                                             })
-        WebSocketUpgradeFilter.configure(inspectorServletContextHandler)
-        inspectorServer.start()
-
         try {
           nodeRuntime.getNodeModule(NodeModuleModule::class.java).setRequireRootDirectory(runtimePath.toFile())
           nodeRuntime.getNodeModule(NodeModuleProcess::class.java).workingDirectory = runtimePath.toFile()
           val javetConverter = JavetProxyConverter()
-          //javetProxyConverter.registerCustomObject(TerminalOptions::class.java, "fromMap", "toMap")
           nodeRuntime.converter = javetConverter
           nodeRuntime.globalObject.set("hulyCode", bridge)
           nodeRuntime.globalObject.set("webview", webView)
@@ -147,6 +122,10 @@ class ClineRuntimeService(
               }
             }
           }
+        }
+        catch (ex: JavetExecutionException) {
+          val err = ex.scriptingError
+          logger.error("${err.detailedMessage}:\n ${err.stack}")
         }
         catch (ex: JavetException) {
           ex.printStackTrace()

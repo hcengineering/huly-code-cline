@@ -276,27 +276,6 @@ export interface TerminalOptions {
   //   isTransient?: boolean;
 }
 
-
-class TerminalImpl implements Terminal {
-  //   shellIntegration?: { cwd?: Uri; executeCommand?: (command: string) => { read: () => AsyncIterable<string>; }; } | undefined;
-  exitStatus: TerminalExitStatus | undefined;
-  //   processId: Thenable<number | undefined>;
-  //   name: string;
-
-  dispose(): void {
-    throw new Error('Method not implemented.');
-  }
-  hide(): void {
-    throw new Error('Method not implemented.');
-  }
-  show(preserveFocus?: boolean): void {
-    throw new Error('Method not implemented.');
-  }
-  sendText(text: string, addNewLine?: boolean): void {
-    throw new Error('Method not implemented.');
-  }
-}
-
 export class ThemeIcon {
   static readonly File: ThemeIcon;
   static readonly Folder: ThemeIcon;

@@ -2,8 +2,9 @@
 // Import the module and reference it with the alias vscode in your code below
 import { Cline } from "../cline/src/core/Cline"
 import { ClineProvider } from "../cline/src/core/webview/ClineProvider"
-
+import process from 'process';
 import * as vscode from "vscode"
+import c from "../cline/src/services/tree-sitter/queries/c"
 
 interface Thenable<T> extends PromiseLike<T> { }
 
@@ -12,7 +13,11 @@ declare var webview: any
 
 var sidebarProvider: ClineProvider
 
-export function activate() {
+process.on('unhandledRejection', (reason, promise) => {
+  console.log("!!!!! ", reason, promise);
+});
+
+export async function activate() {
   var context = new vscode.ExtensionContext()
   var outputChannel = {
     name: "Cline",
@@ -24,14 +29,34 @@ export function activate() {
     clear: () => { },
     dispose: () => { },
   }
+/*
+  const terminal = vscode.window.createTerminal({
+    cwd: "f:\\work\\_misc\\pexport2",
+    name: "Cline",
+    iconPath: new vscode.ThemeIcon("robot"),
+  });
+  await new Promise(f => setTimeout(f, 1000));
 
-  sidebarProvider = new ClineProvider(context, outputChannel)
-  sidebarProvider.resolveWebviewView(webview)
+  var resp = terminal.shellIntegration?.executeCommand?.("cat Cargo.toml");
+  if (resp) {
+    var items = resp.read()
+    for await (const line of items) {
+      console.log("!!!line :",line);
+    }
+    console.log("!!!!finished")
+  }
+*/
+  try {
+    sidebarProvider = new ClineProvider(context, outputChannel)
+    sidebarProvider.resolveWebviewView(webview)
+  } catch (e) {
+    console.log(e)
+  }
 }
 
 export function invokeCallback(callback: any, str: string) {
   const obj = JSON.parse(str);
-  console.log("!!invoke ", callback, str);
+  console.log("!!invoke ", str);
   callback(obj);
 }
 
