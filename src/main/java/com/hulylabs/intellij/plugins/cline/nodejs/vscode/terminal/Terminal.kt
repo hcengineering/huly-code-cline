@@ -3,7 +3,7 @@ package com.hulylabs.intellij.plugins.cline.nodejs.vscode.terminal
 
 import com.caoccao.javet.interop.NodeRuntime
 import com.caoccao.javet.values.V8Value
-import com.hulylabs.intellij.plugins.cline.nodejs.vscode.Uri
+import com.hulylabs.intellij.plugins.cline.nodejs.vscode.core.Uri
 import com.intellij.openapi.application.edtWriteAction
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
@@ -53,7 +53,6 @@ class Terminal(
   }
 
   fun getShellIntegration(): V8Value {
-    LOG.info("getShellIntegration $shellIntegration")
     if (shellIntegration == null) {
       return nodeRuntime.createV8ValueUndefined()
     }

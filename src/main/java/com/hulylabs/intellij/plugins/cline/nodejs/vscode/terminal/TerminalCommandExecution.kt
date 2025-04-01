@@ -2,7 +2,7 @@
 package com.hulylabs.intellij.plugins.cline.nodejs.vscode.terminal
 
 import com.caoccao.javet.interop.NodeRuntime
-import com.hulylabs.intellij.plugins.cline.nodejs.vscode.AsyncIterable
+import com.hulylabs.intellij.plugins.cline.nodejs.vscode.core.AsyncIterable
 import com.intellij.openapi.project.Project
 import com.intellij.terminal.ui.TerminalWidget
 import kotlinx.coroutines.channels.Channel

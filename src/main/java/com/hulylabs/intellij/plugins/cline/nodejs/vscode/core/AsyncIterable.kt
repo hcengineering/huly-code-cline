@@ -1,10 +1,10 @@
 // Copyright © 2025 Huly Labs. Use of this source code is governed by the Apache 2.0 license.
-package com.hulylabs.intellij.plugins.cline.nodejs.vscode
+package com.hulylabs.intellij.plugins.cline.nodejs.vscode.core
 
 import com.caoccao.javet.enums.V8ValueSymbolType
 import com.caoccao.javet.interop.NodeRuntime
 import com.caoccao.javet.interop.V8Runtime
-import com.caoccao.javet.interop.callback.IJavetDirectCallable.NoThisAndResult
+import com.caoccao.javet.interop.callback.IJavetDirectCallable
 import com.caoccao.javet.interop.callback.JavetCallbackContext
 import com.caoccao.javet.interop.callback.JavetCallbackType
 import com.caoccao.javet.interop.proxy.IJavetDirectProxyHandler
@@ -14,20 +14,25 @@ import com.caoccao.javet.values.reference.V8ValuePromise
 import com.caoccao.javet.values.reference.V8ValueSymbol
 import com.caoccao.javet.values.reference.builtin.V8ValueBuiltInSymbol
 import com.intellij.openapi.Disposable
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 
 /**
- * A wrapper for [Flow] that provides a JavaScript AsyncIterable interface.
+ * A wrapper for [kotlinx.coroutines.flow.Flow] that provides a JavaScript AsyncIterable interface.
  */
 class AsyncIterable<T>(
   val nodeRuntime: NodeRuntime,
   flow: Flow<T>,
 ) : Disposable, IJavetDirectProxyHandler<Exception> {
   private val scope = MainScope().plus(CoroutineName("AsyncIterable"))
-  private val queue = Channel<T>(Channel.UNLIMITED)
+  private val queue = Channel<T>(Channel.Factory.UNLIMITED)
   private var isDone = false
   private var error: Throwable? = null
 
@@ -60,7 +65,7 @@ class AsyncIterable<T>(
             V8ValueBuiltInSymbol.SYMBOL_PROPERTY_ASYNC_ITERATOR,
             V8ValueSymbolType.BuiltIn,
             JavetCallbackType.DirectCallNoThisAndResult,
-            object : NoThisAndResult<Exception> {
+            object : IJavetDirectCallable.NoThisAndResult<Exception> {
               override fun call(v8Values: Array<V8Value?>?): V8Value? {
                 return asyncIterator()
               }
@@ -116,7 +121,7 @@ class AsyncIterable<T>(
             "next",
             V8ValueSymbolType.None,
             JavetCallbackType.DirectCallNoThisAndResult,
-            object : NoThisAndResult<Exception> {
+            object : IJavetDirectCallable.NoThisAndResult<Exception> {
               override fun call(v8Values: Array<V8Value?>?): V8Value? {
                 return next()
               }

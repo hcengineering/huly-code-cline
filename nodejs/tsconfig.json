@@ -34,7 +34,6 @@
     "webview-ui",
     "cline/src/extension.ts",
     "cline/src/test/**/*",
-    "cline/src/**/*.test.ts",
-    "cline/src/integrations/editor/DiffViewProvider.ts"
+    "cline/src/**/*.test.ts"
   ]
 }

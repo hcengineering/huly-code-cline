@@ -4,7 +4,8 @@ import { Cline } from "../cline/src/core/Cline"
 import { ClineProvider } from "../cline/src/core/webview/ClineProvider"
 import process from 'process';
 import * as vscode from "vscode"
-import c from "../cline/src/services/tree-sitter/queries/c"
+import "../cline/src/utils/path" // necessary to have access to String.prototype.toPosix
+import { testDiff } from "./tests/difftest";
 
 interface Thenable<T> extends PromiseLike<T> { }
 
@@ -29,24 +30,8 @@ export async function activate() {
     clear: () => { },
     dispose: () => { },
   }
-/*
-  const terminal = vscode.window.createTerminal({
-    cwd: "f:\\work\\_misc\\pexport2",
-    name: "Cline",
-    iconPath: new vscode.ThemeIcon("robot"),
-  });
-  await new Promise(f => setTimeout(f, 1000));
-
-  var resp = terminal.shellIntegration?.executeCommand?.("cat Cargo.toml");
-  if (resp) {
-    var items = resp.read()
-    for await (const line of items) {
-      console.log("!!!line :",line);
-    }
-    console.log("!!!!finished")
-  }
-*/
   try {
+    //await testDiff();
     sidebarProvider = new ClineProvider(context, outputChannel)
     sidebarProvider.resolveWebviewView(webview)
   } catch (e) {

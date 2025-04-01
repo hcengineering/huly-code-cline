@@ -2,7 +2,7 @@
 package com.hulylabs.intellij.plugins.cline.nodejs.vscode.terminal
 
 import com.caoccao.javet.interop.NodeRuntime
-import com.hulylabs.intellij.plugins.cline.nodejs.vscode.Uri
+import com.hulylabs.intellij.plugins.cline.nodejs.vscode.core.Uri
 import com.intellij.openapi.project.Project
 import com.intellij.terminal.ui.TerminalWidget
 

@@ -1,5 +1,3 @@
-import { openAiModelInfoSaneDefaults } from "../../cline/src/shared/api";
-
 export class Uri {
   private filePath: string;
 

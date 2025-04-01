@@ -8,7 +8,7 @@ export interface IHulyCode {
   log(msg: string): void;
 
   getConfiguration(section: string | undefined, key: string): vscode.Thenable<string | undefined>;
-  updateConfiguration(section: string | undefined, key: string, value: string): vscode.Thenable<void>;
+  updateConfiguration(section: string | undefined, key: string, value: string, force?: boolean): vscode.Thenable<void>;
   hasConfiguration(section: string | undefined, key: string): boolean;
 
   globalStateKeys(): string[];
@@ -19,10 +19,23 @@ export interface IHulyCode {
 
   workspaceFolders(): string[];
 
-  getTabs(): vscode.Tab[];
-  getActiveTextEditor(): string | undefined;
-  getVisibleTextEditors(): string[];
-  setEditorDecorations(fsPath: string, key: string, rangesOrOptions: readonly Range[]): void;
+  getTabs(): any[];
+  closeTab(fsPath: string): void;
+  getActiveTextEditor(): vscode.TextEditor | undefined;
+  getVisibleTextEditors(): vscode.TextEditor[];
+  onDidChangeActiveTextEditor: vscode.Event<vscode.TextEditor | undefined>;
 
   createTerminal(options: any): vscode.Terminal;
+
+  executeCommand(command: string, ...rest: any[]): vscode.Thenable<void>;
+  applyWorkspaceEdit(edit: vscode.WorkspaceEdit): vscode.Thenable<boolean>;
+
+  openTextDocument(uri: vscode.Uri): vscode.Thenable<vscode.TextDocument>;
+  showTextDocument(uri: vscode.Uri | vscode.TextDocument, options?: vscode.TextDocumentShowOptions): vscode.Thenable<vscode.TextEditor>;
+
+  getDiagnostics(): { file: string, diagnostics: vscode.Diagnostic[] }[];
+  openExternal(target: string): void;
+
+  clipboardWriteText(text: string): void;
+  clipboardReadText(): vscode.Thenable<string>;
 }

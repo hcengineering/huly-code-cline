@@ -1,9 +1,11 @@
 import { Uri } from "./core/uri";
 import { Range } from "./core/range";
 import { Position } from "./core/position";
+import { Selection } from "./core/selection";
 import { IHulyCode } from "./core/hulycode";
 
 export * from './core/range';
+export * from './core/selection';
 export * from './core/position';
 export * from './core/uri';
 
@@ -99,16 +101,27 @@ export enum ViewColumn {
   Nine = 9
 }
 
+export class Clipboard {
+  writeText(value: string): Thenable<void> {
+    hulyCode.clipboardWriteText(value)
+    return Promise.resolve()
+  }
+  readText(): Thenable<string> {
+    return hulyCode.clipboardReadText()
+  }
+}
+
 export namespace env {
   // export const appName: string = "Huly Code";
 
+  // TODO: used in ripgrep need port ripgrep tools to HulyCode
   export const appRoot: string = "";
   // export const appHost: string = "desktop";
 
   export const uriScheme: string = "";
   // export const language: string;
   // export const clipboard: Clipboard;
-  // export const machineId: string;
+  export const machineId: string = "";
   // export const sessionId: string;
   // export const isNewAppInstall: boolean;
   // export const isTelemetryEnabled: boolean;
@@ -119,21 +132,42 @@ export namespace env {
   // export const shell: string;
   // export const uiKind: UIKind;
   export function openExternal(target: Uri): Thenable<boolean> {
-    console.log("openExternal", target)
+    hulyCode.openExternal(target.fsPath)
     return Promise.resolve(true)
   }
   // export function asExternalUri(target: Uri): Thenable<Uri>;
   // export const logLevel: LogLevel;
   // export const onDidChangeLogLevel: Event<LogLevel>;
+  export const clipboard: Clipboard = new Clipboard();
+}
+
+export interface TabInputOriginal {
+  readonly scheme: string;
 }
 
 export class TabInputText {
   readonly uri: Uri;
+  readonly modified: Uri;
+
   constructor(uri: Uri) {
     this.uri = uri;
+    this.modified = uri;
   }
 }
 
+export class TabInputTextDiff {
+  readonly uri: Uri;
+  readonly modified: Uri;
+  readonly original: TabInputOriginal;
+
+  constructor(uri: Uri) {
+    this.uri = uri;
+    this.modified = uri;
+    this.original = {
+      scheme: "cline-diff"
+    }
+  }
+}
 
 export interface Tab {
 
@@ -210,6 +244,21 @@ export interface DecorationRenderOptions extends ThemableDecorationRenderOptions
   //   overviewRulerLane?: OverviewRulerLane;
   //   light?: ThemableDecorationRenderOptions;
   //   dark?: ThemableDecorationRenderOptions;
+}
+
+export interface TextEditorOptions {
+  tabSize?: number | string;
+  indentSize?: number | string;
+  insertSpaces?: boolean | string;
+  //cursorStyle?: TextEditorCursorStyle;
+  //lineNumbers?: TextEditorLineNumbersStyle;
+}
+
+export enum TextEditorRevealType {
+  Default = 0,
+  InCenter = 1,
+  InCenterIfOutsideViewport = 2,
+  AtTop = 3
 }
 
 export interface TextEditorDecorationType {
@@ -308,21 +357,37 @@ export interface OpenDialogOptions {
 export namespace window {
 
   export const tabGroups: TabGroups = {
-    all: [ {
-      isActive: true,
-      viewColumn: ViewColumn.One,
-      tabs: hulyCode.getTabs(),
-    }],
+    get all(): TabGroup[] {
+      return [{
+        isActive: true,
+        viewColumn: ViewColumn.One,
+        tabs: hulyCode.getTabs().map((tab) => {
+          var input = tab.isDiff() ? new TabInputTextDiff(Uri.file(tab.path)) : new TabInputText(Uri.file(tab.path));
+          return {
+            label: tab.path,
+            input: input,
+            isActive: false,
+            isDirty: tab.isDirty(),
+            isPinned: false,
+            isPreview: false,
+          } as Tab
+        }),
+      }]
+    },
     close: function(tabGroup: TabGroup | Tab | readonly Tab[] | readonly TabGroup[], preserveFocus?: boolean): Thenable<boolean> {
-      throw new Error('Function not implemented.');
+      var tab = tabGroup as any;
+      if (tab.input) {
+        hulyCode.closeTab(tab.input.uri.fsPath);
+      }
+      return Promise.resolve(true);
     }
   };
 
-  export let activeTextEditor: TextEditor | undefined;
+  export let activeTextEditor: TextEditor | undefined = hulyCode.getActiveTextEditor();
 
-  export let visibleTextEditors: readonly TextEditor[];
+  export let visibleTextEditors: readonly TextEditor[] = hulyCode.getVisibleTextEditors();
 
-  // export const onDidChangeActiveTextEditor: Event<TextEditor | undefined>;
+  export const onDidChangeActiveTextEditor: Event<TextEditor | undefined> = hulyCode.onDidChangeActiveTextEditor;
 
   // export const onDidChangeVisibleTextEditors: Event<readonly TextEditor[]>;
 
@@ -373,16 +438,14 @@ export namespace window {
   //   }
 
   export function showTextDocument(uri: Uri | TextDocument, options?: TextDocumentShowOptions): Thenable<TextEditor> {
-    console.log(`showTextDocument: ${uri}`);
-    return Promise.resolve<any>(undefined);
+    return hulyCode.showTextDocument(uri, options);
   }
 
   // export function showNotebookDocument(document: NotebookDocument, options?: NotebookDocumentShowOptions): Thenable<NotebookEditor>;
 
   export function createTextEditorDecorationType(options: DecorationRenderOptions): TextEditorDecorationType {
-    console.log("createTextEditorDecorationType");
     return {
-      key: "",
+      key: options.opacity === "1" ? "active" : "faded",
       dispose: () => {
         console.log("createTextEditorDecorationType.dispose");
       }
@@ -438,7 +501,6 @@ export namespace window {
   }
 
   export function showSaveDialog(options?: SaveDialogOptions): Thenable<Uri | undefined> {
-
     console.log(`showSaveDialog: ${options}`);
     return Promise.resolve<Uri>(Uri.file("test.txt"));
   }
@@ -781,25 +843,34 @@ export interface WorkspaceFolder {
   readonly index: number;
 }
 
+export interface TextLine {
+  readonly lineNumber: number;
+  readonly text: string;
+  readonly range: Range;
+  readonly rangeIncludingLineBreak: Range;
+  readonly firstNonWhitespaceCharacterIndex: number;
+  readonly isEmptyOrWhitespace: boolean;
+}
+
 export interface TextDocument {
   readonly uri: Uri;
-  // readonly fileName: string;
-  // readonly isUntitled: boolean;
-  // readonly languageId: string;
-  // readonly version: number;
-  // readonly isDirty: boolean;
-  // readonly isClosed: boolean;
-  // save(): Thenable<boolean>;
-  // readonly eol: EndOfLine;
-  // readonly lineCount: number;
-  // lineAt(line: number): TextLine;
-  // lineAt(position: Position): TextLine;
-  // offsetAt(position: Position): number;
-  // positionAt(offset: number): Position;
-  // getText(range?: Range): string;
-  // getWordRangeAtPosition(position: Position, regex?: RegExp): Range | undefined;
-  // validateRange(range: Range): Range;
-  // validatePosition(position: Position): Position;
+  //readonly fileName: string;
+  //readonly isUntitled: boolean;
+  readonly languageId: string;
+  //readonly version: number;
+  readonly isDirty: boolean;
+  //readonly isClosed: boolean;
+  save(): Thenable<boolean>;
+  //readonly eol: EndOfLine;
+  readonly lineCount: number;
+  //lineAt(line: number): TextLine;
+  lineAt(position: Position): TextLine;
+  //offsetAt(position: Position): number;
+  positionAt(offset: number): Position;
+  getText(range?: Range): string;
+  //getWordRangeAtPosition(position: Position, regex?: RegExp): Range | undefined;
+  //validateRange(range: Range): Range;
+  //validatePosition(position: Position): Position;
 }
 
 export enum ExtensionKind {
@@ -882,11 +953,30 @@ export interface WorkspaceConfiguration {
   get<T>(section: string): T | undefined;
   get<T>(section: string, defaultValue: T): T;
   has(section: string): boolean;
-  update(section: string, value: any): Thenable<void>;
+  update(section: string, value: any, force?: boolean): Thenable<void>;
 }
 
 export interface ConfigurationChangeEvent {
   affectsConfiguration(section: string): boolean;
+}
+
+export class WorkspaceEdit {
+  uri?: Uri;
+  range?: Range;
+  newText?: string;
+
+  constructor() { }
+
+  replace(uri: Uri, range: Range, newText: string): void {
+    this.uri = uri;
+    this.range = range;
+    this.newText = newText;
+  }
+
+  delete(uri: Uri, range: Range): void {
+    this.uri = uri;
+    this.range = range;
+  }
 }
 
 export namespace workspace {
@@ -902,6 +992,7 @@ export namespace workspace {
       index: 0,
     }
   });
+
 
   // export const name: string | undefined;
 
@@ -931,13 +1022,14 @@ export namespace workspace {
 
   // export function saveAll(includeUntitled?: boolean): Thenable<boolean>;
 
-  // export function applyEdit(edit: WorkspaceEdit, metadata?: WorkspaceEditMetadata): Thenable<boolean>;
+  export function applyEdit(edit: WorkspaceEdit): Thenable<boolean> {
+    return hulyCode.applyWorkspaceEdit(edit);
+  }
 
-  // export const textDocuments: readonly TextDocument[];
+  export const textDocuments: readonly TextDocument[] = hulyCode.getVisibleTextEditors().map((editor) => editor.document);
 
   export function openTextDocument(uri: Uri): Thenable<TextDocument> {
-    console.log(`openTextDocument: ${uri}`);
-    return Promise.resolve<any>(undefined);
+    return hulyCode.openTextDocument(uri);
   }
 
   // export function openTextDocument(fileName: string): Thenable<TextDocument>;
@@ -999,8 +1091,8 @@ export namespace workspace {
       has: (key: string) => {
         return hulyCode.hasConfiguration(section, key);
       },
-      update: (key: string, value: any) => {
-        hulyCode.updateConfiguration(section, key, value);
+      update: (key: string, value: any, force?: boolean) => {
+        hulyCode.updateConfiguration(section, key, value, force);
         return Promise.resolve();
       }
     }
@@ -1089,6 +1181,12 @@ export interface SecretStorage {
   delete(key: string): Thenable<void>;
 }
 
+export enum ExtensionMode {
+  Production = 1,
+  Development = 2,
+  Test = 3,
+}
+
 export class ExtensionContext {
   public get globalStorageUri(): Uri {
     return Uri.file(hulyCode.getGlobalStoragePath());
@@ -1097,6 +1195,8 @@ export class ExtensionContext {
   public get extensionUri(): Uri {
     return Uri.file("http://hulycline");
   }
+
+  public extensionMode: ExtensionMode = ExtensionMode.Production;
 
   // TODO: Used for version need provide version of HulyCode
   public extension: any;
@@ -1197,13 +1297,14 @@ export interface TextEditor {
 
   readonly document: TextDocument;
 
+  // only set from DiffEditor
   selection: Selection;
 
-  selections: readonly Selection[];
+  //selections: readonly Selection[];
 
-  readonly visibleRanges: readonly Range[];
+  //readonly visibleRanges: readonly Range[];
 
-  //options: TextEditorOptions;
+  options: TextEditorOptions;
 
   readonly viewColumn: ViewColumn | undefined;
 
@@ -1219,11 +1320,11 @@ export interface TextEditor {
 
   setDecorations(decorationType: TextEditorDecorationType, rangesOrOptions: readonly Range[]): void;
 
-  // revealRange(range: Range, revealType?: TextEditorRevealType): void;
+  revealRange(range: Range, revealType?: TextEditorRevealType): void;
 
-  // show(column?: ViewColumn): void;
+  //show(column?: ViewColumn): void;
 
-  // hide(): void;
+  //hide(): void;
 }
 
 export interface OutputChannel {
@@ -1249,8 +1350,9 @@ export interface OutputChannel {
 
 export namespace languages {
   export function getDiagnostics(): [Uri, Diagnostic[]][] {
-    console.log("getDiagnostics")
-    return []
+    return hulyCode.getDiagnostics().map((it) => {
+      return [Uri.file(it.file), it.diagnostics];
+    });
   }
 }
 
@@ -1303,19 +1405,16 @@ export interface WebviewViewProvider {
   resolveWebviewView(webviewView: WebviewView, context: WebviewViewResolveContext, token: CancellationToken): Thenable<void> | void;
 }
 
-// Mock commands namespace
 export namespace commands {
   export function registerCommand(command: string, callback: (...args: any[]) => any): Disposable {
     console.log(`Command registered: ${command}`);
     return new Disposable(() => {
       console.log(`Command unregistered: ${command}`);
-      console.log(`Command unregistered: ${command}`);
     });
   }
 
-  export function executeCommand<T>(command: string, ...rest: any[]): Thenable<T> {
-    console.log(`executeCommand: ${command}, args: ${rest.join(', ')}`);
-    return Promise.resolve<any>(undefined);
+  export function executeCommand(command: string, ...rest: any[]): Thenable<void> {
+    return hulyCode.executeCommand(command, rest);
   }
 }
 

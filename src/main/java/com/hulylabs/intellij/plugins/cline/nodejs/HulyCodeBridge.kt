@@ -2,24 +2,58 @@
 package com.hulylabs.intellij.plugins.cline.nodejs
 
 import com.caoccao.javet.interop.NodeRuntime
+import com.caoccao.javet.values.V8Value
+import com.caoccao.javet.values.reference.V8ValueFunction
 import com.hulylabs.intellij.plugins.cline.ClineConfiguration
-import com.hulylabs.intellij.plugins.cline.nodejs.vscode.*
+import com.hulylabs.intellij.plugins.cline.nodejs.vscode.Extension
+import com.hulylabs.intellij.plugins.cline.nodejs.vscode.FileDiagnostic
+import com.hulylabs.intellij.plugins.cline.nodejs.vscode.Tab
+import com.hulylabs.intellij.plugins.cline.nodejs.vscode.VsCodeDiagnostic
+import com.hulylabs.intellij.plugins.cline.nodejs.vscode.core.*
+import com.hulylabs.intellij.plugins.cline.nodejs.vscode.editor.DiffTextEditor
+import com.hulylabs.intellij.plugins.cline.nodejs.vscode.editor.TextDocument
+import com.hulylabs.intellij.plugins.cline.nodejs.vscode.editor.TextEditor
+import com.hulylabs.intellij.plugins.cline.nodejs.vscode.editor.WorkspaceEdit
 import com.hulylabs.intellij.plugins.cline.nodejs.vscode.terminal.Terminal
 import com.hulylabs.intellij.plugins.cline.nodejs.vscode.terminal.TerminalOptions
 import com.intellij.credentialStore.CredentialAttributes
 import com.intellij.credentialStore.Credentials
 import com.intellij.credentialStore.generateServiceName
+import com.intellij.diff.DiffContentFactory
+import com.intellij.diff.DiffManager
+import com.intellij.diff.editor.DiffEditorViewerFileEditor
+import com.intellij.diff.requests.SimpleDiffRequest
+import com.intellij.ide.BrowserUtil
+import com.intellij.ide.actions.OpenFileAction
+import com.intellij.ide.actions.RevealFileAction
 import com.intellij.ide.passwordSafe.PasswordSafe
 import com.intellij.ide.ui.LafManager
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.PathManager
+import com.intellij.openapi.application.ex.ClipboardUtil
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.FileEditorManagerListener
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.vfs.VfsUtil
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.readText
+import com.intellij.openapi.wm.ToolWindowId
+import com.intellij.openapi.wm.ToolWindowManager
+import com.intellij.terminal.JBTerminalWidget
 import com.intellij.util.ArrayUtil
-import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.plus
+import com.redhat.devtools.lsp4ij.features.diagnostics.LSPDiagnosticListener
+import kotlinx.coroutines.*
+import org.eclipse.lsp4j.Diagnostic
+import org.eclipse.lsp4j.PublishDiagnosticsParams
+import org.jetbrains.plugins.terminal.TerminalToolWindowManager
+import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
 
 private val LOG = Logger.getInstance("#cline")
 private val CLINE_LOG = Logger.getInstance("#cline_log")
@@ -32,6 +66,19 @@ internal constructor(
 ) : Disposable {
 
   private val scope = MainScope().plus(CoroutineName("HulyCodeBridge"))
+  private val diagnostics = mutableMapOf<String, List<Diagnostic>>()
+
+  private var activeDiffEditor: DiffTextEditor? = null
+
+  init {
+    project.messageBus.connect(this).subscribe(LSPDiagnosticListener.TOPIC, object : LSPDiagnosticListener {
+      override fun publishDiagnostics(params: PublishDiagnosticsParams) {
+        val uri = params.uri
+        val diagnostics = params.diagnostics
+        this@HulyCodeBridge.diagnostics[uri] = diagnostics
+      }
+    })
+  }
 
   fun log(message: String?) {
     CLINE_LOG.info(message)
@@ -99,7 +146,7 @@ internal constructor(
     return ClineConfiguration.Companion.getInstance().workspaceParams.containsKey(section + "." + key)
   }
 
-  fun updateConfiguration(section: String?, key: String?, value: String?) {
+  fun updateConfiguration(section: String?, key: String?, value: String?, force: Boolean?) {
     LOG.info("updateConfiguration section=$section key=$key value=$value")
     ClineConfiguration.Companion.getInstance().workspaceParams.put(section + "." + key, value!!)
   }
@@ -135,37 +182,228 @@ internal constructor(
     return arrayOf<String?>(project.getBasePath())
   }
 
-  fun getTabs(): List<Tab?> {
+  fun getTabs(): List<Tab> {
     LOG.info("getTabs")
-    val fileEditors = FileEditorManager.getInstance(project).getOpenFiles()
-    return fileEditors.map { file ->
-      Tab(file!!.getName(),
-          TabInputText(Uri(file.getPath())), null,
-          true, false,
-          false, false)
+    val fileEditors = FileEditorManager.getInstance(project).allEditors
+    return fileEditors.map { editor ->
+      if (editor is DiffEditorViewerFileEditor) {
+        Tab(editor.filesToRefresh.first().path, editor.isModified, true)
+      }
+      else {
+        Tab(editor.file.path, editor.isModified, false)
+      }
     }
   }
 
-  fun getActiveTextEditor(): String? {
+  fun closeTab(filePath: String) {
+    LOG.info("closeTab $filePath")
+    val fileEditors = FileEditorManager.getInstance(project).allEditors
+    scope.launch {
+      withContext(Dispatchers.EDT) {
+        fileEditors.forEach { editor ->
+          val path = if (editor is DiffEditorViewerFileEditor) {
+            editor.filesToRefresh.first().path
+          }
+          else {
+            editor.file.path
+          }
+          if (path == filePath) {
+            FileEditorManager.getInstance(project).closeFile(editor.file)
+          }
+        }
+      }
+    }
+  }
+
+  private fun toNodeEditor(editor: FileEditor): TextEditor {
+    if (editor is DiffEditorViewerFileEditor) {
+      return DiffTextEditor(project, nodeRuntime, editor)
+    }
+    return TextEditor(nodeRuntime, editor)
+  }
+
+  fun getActiveTextEditor(): TextEditor? {
     LOG.info("getActiveTextEditor")
     val editor = FileEditorManager.getInstance(project).selectedEditor
-    return editor?.file?.path
+    return editor?.let { toNodeEditor(editor) }
   }
 
-  fun getVisibleTextEditors(): List<String> {
+  fun getVisibleTextEditors(): List<TextEditor> {
     LOG.info("getVisibleTextEditors")
     val editors = FileEditorManager.getInstance(project).allEditors
-    return editors.filter { it.isValid }.map { it.file.path }
+    return editors.filter { it.isValid }.map { toNodeEditor(it) }
   }
 
-  fun setEditorDecorations(fsPath: String, key: String, rangesOrOptions: List<Range>) {
-    LOG.info("setEditorDecorations fsPath=$fsPath key=$key rangesOrOptions=$rangesOrOptions")
+  fun onDidChangeActiveTextEditor(listener: V8ValueFunction): JsDisposable {
+    LOG.info("onDidChangeActiveTextEditor")
+    val disposable = JsDisposable(listener, Disposer.newDisposable())
+    listener.setWeak()
+    nodeRuntime.globalObject.set("onDidChangeActiveTextEditor${listener.hashCode()}", listener)
+    ApplicationManager.getApplication().messageBus.connect(disposable.disposable!!).subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER, object : FileEditorManagerListener {
+      override fun fileOpened(source: FileEditorManager, file: VirtualFile) {
+        val editor = FileEditorManager.getInstance(project).getSelectedEditor(file)
+        if (editor != null) {
+          var nodeEditor: TextEditor? = null
+          if (editor is DiffEditorViewerFileEditor) {
+            activeDiffEditor = DiffTextEditor(project, nodeRuntime, editor)
+            nodeEditor = activeDiffEditor
+          }
+          else {
+            nodeEditor = toNodeEditor(editor)
+          }
+          listener.callVoid(null, nodeEditor)
+        }
+      }
+    })
+    return disposable
   }
 
   fun createTerminal(options: HashMap<Any, Any>): Terminal? {
     val terminalOptions = TerminalOptions.Companion.fromMap(options)
     LOG.info("createTerminal options=$options")
     return Terminal(project, nodeRuntime, terminalOptions)
+  }
+
+  fun executeCommand(command: String, args: List<V8Value>): Thenable/*<void>*/ {
+    LOG.info("executeCommand command=$command args=$args")
+    when (command) {
+      "vscode.diff" -> {
+        val filePath = (args[1] as Map<*, *>)["filePath"].toString()
+        val title = "${args[2]}"
+        val file = VfsUtil.findFile(Path.of(filePath), true)
+        scope.launch {
+          withContext(Dispatchers.EDT) {
+            val contentFactory = DiffContentFactory.getInstance()
+            val diffRequest = SimpleDiffRequest(
+              title,
+              contentFactory.create(project, file!!),
+              contentFactory.createEditable(project, file.readText(), file.fileType),
+              filePath,
+              "Cline changes"
+            )
+            DiffManager.getInstance().showDiff(project, diffRequest)
+          }
+        }
+      }
+      "revealInExplorer" -> {
+        val filePath = (args[1] as Map<*, *>)["filePath"].toString()
+        RevealFileAction.openFile(Path.of(filePath))
+      }
+      "workbench.actions.view.problems" -> {
+        ToolWindowManager.getInstance(project).getToolWindow(ToolWindowId.PROBLEMS_VIEW)?.show(null)
+      }
+      "workbench.action.terminal.focus" -> {
+        ToolWindowManager.getInstance(project).getToolWindow("Terminal")?.show(null)
+      }
+      "workbench.action.openSettings" -> {
+
+      }
+      "claude-dev.SidebarProvider.focus" -> {
+        ToolWindowManager.getInstance(project).getToolWindow("Cline")?.show(null)
+      }
+      "vscode.changes" -> {
+        val title = "${args[0]}"
+        val changes = args[1] as List<Any>
+      }
+      "setContext" -> {}
+      "workbench.action.terminal.selectAll",
+      "workbench.action.terminal.clearSelection",
+        -> {
+        // not used, we use copySelection instead to copy text of current terminal output
+      }
+      "workbench.action.terminal.copySelection" -> {
+        val widget = TerminalToolWindowManager.getInstance(project).terminalWidgets.firstOrNull()
+        if (widget != null) {
+          val jediWidget = JBTerminalWidget.asJediTermWidget(widget)
+          if (jediWidget != null) {
+            CopyPasteManager.copyTextToClipboard(jediWidget.text)
+          }
+        }
+      }
+      "vscode.open" -> {
+        val uri = "${args[0]}"
+        OpenFileAction.openFile(uri, project)
+      }
+    }
+    return ThenableBuilder.createCompleted(nodeRuntime, nodeRuntime.createV8ValueNull())
+  }
+
+  fun applyWorkspaceEdit(edit: Map<String, Any>): Thenable/*<boolean>*/ {
+    val workspaceEdit = WorkspaceEdit.fromMap(edit)
+    activeDiffEditor?.applyEdit(workspaceEdit)
+    return ThenableBuilder.createCompleted(nodeRuntime, nodeRuntime.createV8ValueBoolean(true))
+  }
+
+  private fun openTextFile(uri: Map<String, Any>, needDocument: Boolean): Thenable {
+    var filePath = uri["filePath"] as String
+    var file = VfsUtil.findFile(Path.of(filePath), true)
+    if (file != null) {
+      val result = CompletableFuture<Any?>()
+      scope.launch {
+        withContext(Dispatchers.EDT) {
+          val editor = FileEditorManager.getInstance(project).openFile(file, true).firstOrNull()
+          if (editor != null) {
+            result.complete(if (needDocument) TextDocument(nodeRuntime, editor) else TextEditor(nodeRuntime, editor))
+          }
+          else {
+            result.complete(null)
+          }
+        }
+      }
+      return ThenableBuilder.create(nodeRuntime, result)
+    }
+    return ThenableBuilder.createCompleted(nodeRuntime, null)
+  }
+
+  fun openTextDocument(uri: Map<String, Any>): Thenable/*<TextDocument>*/ {
+    LOG.info("openTextDocument $uri")
+    return openTextFile(uri, true)
+  }
+
+  fun showTextDocument(uri: Map<String, Any>, options: Map<String, Any>?): Thenable/*<vscode.TextEditor>*/ {
+    LOG.info("showTextDocument uri: $uri, options: $options")
+    return openTextFile(uri, false)
+  }
+
+  fun showTextDocument(uri: Map<String, Any>): Thenable/*<vscode.TextEditor>*/ {
+    return showTextDocument(uri, null)
+  }
+
+  fun showTextDocument(document: TextDocument, options: Map<String, Any>?): Thenable/*<vscode.TextEditor>*/ {
+    LOG.info("showTextDocument document: $document, options: $options")
+    // we assume that the document is already opened
+    return ThenableBuilder.createCompleted(nodeRuntime, TextEditor(nodeRuntime, document.editor))
+  }
+
+  fun getDiagnostics(): List<FileDiagnostic> {
+    LOG.info("getDiagnostics")
+    return diagnostics.entries
+      .map { (file, diagnostics) ->
+        FileDiagnostic(file, diagnostics.map {
+          VsCodeDiagnostic(Range(it.range.start.line, it.range.start.character,
+                                 it.range.end.line, it.range.end.character,
+                                 Position(it.range.start.line, it.range.start.character),
+                                 Position(it.range.end.line, it.range.end.character)),
+                           it.message,
+                           it.severity.value - 1,
+                           it.source)
+        })
+      }
+  }
+
+  fun openExternal(uri: String) {
+    LOG.info("openExternal uri: $uri")
+    BrowserUtil.browse(uri)
+  }
+
+  fun clipboardWriteText(text: String) {
+    LOG.info("clipboardWriteText text: $text")
+    CopyPasteManager.copyTextToClipboard(text)
+  }
+
+  fun clipboardReadText(): Thenable/*<string>*/ {
+    LOG.info("clipboardReadText")
+    return ThenableBuilder.createCompleted(nodeRuntime, nodeRuntime.createV8ValueString(ClipboardUtil.getTextInClipboard()))
   }
 
   override fun dispose() {
