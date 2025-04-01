@@ -11,6 +11,7 @@ import com.hulylabs.intellij.plugins.cline.nodejs.vscode.Tab
 import com.hulylabs.intellij.plugins.cline.nodejs.vscode.VsCodeDiagnostic
 import com.hulylabs.intellij.plugins.cline.nodejs.vscode.core.*
 import com.hulylabs.intellij.plugins.cline.nodejs.vscode.editor.DiffTextEditor
+import com.hulylabs.intellij.plugins.cline.nodejs.vscode.editor.EditorUtils.getQueueContent
 import com.hulylabs.intellij.plugins.cline.nodejs.vscode.editor.TextDocument
 import com.hulylabs.intellij.plugins.cline.nodejs.vscode.editor.TextEditor
 import com.hulylabs.intellij.plugins.cline.nodejs.vscode.editor.WorkspaceEdit
@@ -20,20 +21,32 @@ import com.intellij.credentialStore.CredentialAttributes
 import com.intellij.credentialStore.Credentials
 import com.intellij.credentialStore.generateServiceName
 import com.intellij.diff.DiffContentFactory
+import com.intellij.diff.DiffDialogHints
 import com.intellij.diff.DiffManager
+import com.intellij.diff.chains.SimpleDiffRequestChain
 import com.intellij.diff.editor.DiffEditorViewerFileEditor
+import com.intellij.diff.requests.DiffRequest
 import com.intellij.diff.requests.SimpleDiffRequest
 import com.intellij.ide.BrowserUtil
 import com.intellij.ide.actions.OpenFileAction
 import com.intellij.ide.actions.RevealFileAction
 import com.intellij.ide.passwordSafe.PasswordSafe
+import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.ide.ui.LafManager
+import com.intellij.notification.NotificationGroupManager
+import com.intellij.notification.NotificationType
+import com.intellij.notification.NotificationsManager
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.application.ex.ClipboardUtil
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.extensions.PluginId
+import com.intellij.openapi.fileChooser.FileChooser
+import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
+import com.intellij.openapi.fileChooser.FileChooserFactory
+import com.intellij.openapi.fileChooser.FileSaverDescriptorFactory
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
@@ -80,6 +93,10 @@ internal constructor(
     })
   }
 
+  fun getPluginVersion(): String {
+    return PluginManagerCore.getPlugin(PluginId.getId("com.hulylabs.cline"))?.version ?: "1.0.0"
+  }
+
   fun log(message: String?) {
     CLINE_LOG.info(message)
   }
@@ -93,31 +110,25 @@ internal constructor(
     }
 
   fun getSecret(key: String): String? {
-    LOG.info("getSecret key=$key")
-    val attributes = CredentialAttributes(
-      generateServiceName("Cline", key)
-    )
+    LOG.debug("getSecret key=$key")
+    val attributes = CredentialAttributes(generateServiceName("Cline", key))
     val passwordSafe = PasswordSafe.Companion.instance
     return passwordSafe.getPassword(attributes)
   }
 
   fun storeSecret(key: String, value: String?) {
-    LOG.info("storeSecret key=$key")
-    val attributes = CredentialAttributes(
-      generateServiceName("Cline", key)
-    )
+    LOG.debug("storeSecret key=$key")
+    val attributes = CredentialAttributes(generateServiceName("Cline", key))
     val passwordSafe = PasswordSafe.Companion.instance
     val credentials = Credentials("", value)
-    passwordSafe.set(attributes, credentials, false)
+    passwordSafe[attributes, credentials] = false
   }
 
   @JvmName("deleteSecret")
   fun deleteSecret(key: String) {
-    LOG.info("deleteSecret key=$key")
+    LOG.debug("deleteSecret key=$key")
     val passwordSafe = PasswordSafe.Companion.instance
-    val attributes = CredentialAttributes(
-      generateServiceName("Cline", key)
-    )
+    val attributes = CredentialAttributes(generateServiceName("Cline", key))
     passwordSafe[attributes, null] = false
   }
 
@@ -157,17 +168,17 @@ internal constructor(
   }
 
   fun globalStateKeys(): Array<String?> {
-    LOG.info("globalStateKeys")
+    LOG.debug("globalStateKeys")
     return ArrayUtil.toStringArray(ClineConfiguration.Companion.getInstance().globalParams.keys)
   }
 
   fun globalStateGet(key: String?): String? {
-    LOG.info("globalStateGet key=$key")
+    LOG.debug("globalStateGet key=$key")
     return ClineConfiguration.Companion.getInstance().globalParams.get(key)
   }
 
   fun globalStateUpdate(key: String?, value: String?) {
-    LOG.info("globalStateUpdate key=$key value=$value")
+    LOG.debug("globalStateUpdate key=$key value=$value")
     if (value == null) {
       ClineConfiguration.Companion.getInstance().globalParams.remove(key)
     }
@@ -274,13 +285,7 @@ internal constructor(
         scope.launch {
           withContext(Dispatchers.EDT) {
             val contentFactory = DiffContentFactory.getInstance()
-            val diffRequest = SimpleDiffRequest(
-              title,
-              contentFactory.create(project, file!!),
-              contentFactory.createEditable(project, file.readText(), file.fileType),
-              filePath,
-              "Cline changes"
-            )
+            val diffRequest = SimpleDiffRequest(title, contentFactory.create(project, file!!), contentFactory.createEditable(project, file.readText(), file.fileType), filePath, "Cline changes")
             DiffManager.getInstance().showDiff(project, diffRequest)
           }
         }
@@ -303,13 +308,30 @@ internal constructor(
       }
       "vscode.changes" -> {
         val title = "${args[0]}"
-        val changes = args[1] as List<Any>
+        val changes = args[1] as List<*>
+        scope.launch {
+          withContext(Dispatchers.EDT) {
+            val diffRequests = mutableListOf<DiffRequest>()
+            val contentFactory = DiffContentFactory.getInstance()
+            for (change in changes) {
+              val change = change as List<*>
+              val absolutePath = (change[0] as Map<*, *>)["filePath"] as String
+              val beforeContent = ((change[1] as Map<*, *>)["filePath"] as String).getQueueContent()
+              val afterContent = ((change[2] as Map<*, *>)["filePath"] as String).getQueueContent()
+              val file = VfsUtil.findFile(Path.of(absolutePath), true)
+              val diffRequest = SimpleDiffRequest(file?.name, contentFactory.create(project, beforeContent, file), contentFactory.create(project, afterContent, file), file?.name
+                                                                                                                                                                       ?: "Original", title)
+              diffRequests.add(diffRequest)
+            }
+            val diffChain = SimpleDiffRequestChain(diffRequests)
+            DiffManager.getInstance().showDiff(project, diffChain, DiffDialogHints.DEFAULT)
+          }
+        }
       }
       "setContext" -> {}
       "workbench.action.terminal.selectAll",
       "workbench.action.terminal.clearSelection",
-        -> {
-        // not used, we use copySelection instead to copy text of current terminal output
+        -> { // not used, we use copySelection instead to copy text of current terminal output
       }
       "workbench.action.terminal.copySelection" -> {
         val widget = TerminalToolWindowManager.getInstance(project).terminalWidgets.firstOrNull()
@@ -370,23 +392,15 @@ internal constructor(
   }
 
   fun showTextDocument(document: TextDocument, options: Map<String, Any>?): Thenable/*<vscode.TextEditor>*/ {
-    LOG.info("showTextDocument document: $document, options: $options")
-    // we assume that the document is already opened
+    LOG.info("showTextDocument document: $document, options: $options") // we assume that the document is already opened
     return ThenableBuilder.createCompleted(nodeRuntime, TextEditor(nodeRuntime, document.editor))
   }
 
   fun getDiagnostics(): List<FileDiagnostic> {
     LOG.info("getDiagnostics")
-    return diagnostics.entries
-      .map { (file, diagnostics) ->
+    return diagnostics.entries.map { (file, diagnostics) ->
         FileDiagnostic(file, diagnostics.map {
-          VsCodeDiagnostic(Range(it.range.start.line, it.range.start.character,
-                                 it.range.end.line, it.range.end.character,
-                                 Position(it.range.start.line, it.range.start.character),
-                                 Position(it.range.end.line, it.range.end.character)),
-                           it.message,
-                           it.severity.value - 1,
-                           it.source)
+          VsCodeDiagnostic(Range(it.range.start.line, it.range.start.character, it.range.end.line, it.range.end.character, Position(it.range.start.line, it.range.start.character), Position(it.range.end.line, it.range.end.character)), it.message, it.severity.value - 1, it.source)
         })
       }
   }
@@ -404,6 +418,78 @@ internal constructor(
   fun clipboardReadText(): Thenable/*<string>*/ {
     LOG.info("clipboardReadText")
     return ThenableBuilder.createCompleted(nodeRuntime, nodeRuntime.createV8ValueString(ClipboardUtil.getTextInClipboard()))
+  }
+
+  fun showInformationMessage(message: String) {
+    LOG.info("showInformationMessage: $message")
+    NotificationsManager.getNotificationsManager().showNotification(NotificationGroupManager.getInstance().getNotificationGroup("Cline").createNotification("Cline", message, NotificationType.INFORMATION), project)
+  }
+
+  fun showWarningMessage(message: String) {
+    showWarningMessage(message, emptyList())
+  }
+
+  fun showWarningMessage(message: String, items: List<String>) {
+    LOG.info("showWarningMessage: $message")
+    NotificationsManager.getNotificationsManager().showNotification(NotificationGroupManager.getInstance().getNotificationGroup("Cline").createNotification("Cline", "$message\n${items.joinToString("\n")}", NotificationType.WARNING), project)
+  }
+
+  fun showErrorMessage(message: String) {
+    showErrorMessage(message, emptyList())
+  }
+
+  fun showErrorMessage(message: String, items: List<String>) {
+    LOG.info("showErrorMessage: $message")
+    NotificationsManager.getNotificationsManager().showNotification(NotificationGroupManager.getInstance().getNotificationGroup("Cline").createNotification("Cline", "$message\n${items.joinToString("\n")}", NotificationType.ERROR), project)
+  }
+
+  fun showOpenDialog(options: Map<String, Any>): Thenable/*<vscode.Uri[]>*/ {
+    LOG.info("showOpenDialog: $options")
+    val canSelectMany = options["canSelectMany"] as Boolean
+    val openLabel = options["openLabel"] as String
+    val filters = options["filters"] as Map<*, *>
+    val descriptor = if (canSelectMany) {
+      FileChooserDescriptorFactory.multiFiles()
+    }
+    else {
+      FileChooserDescriptorFactory.singleFile()
+    }
+    descriptor.withTitle(openLabel)
+    for (filter in filters) {
+      val name = filter.key as String
+      val extensionsList = filter.value as List<*>
+      val extensions = extensionsList.map { it as String }.toTypedArray()
+      descriptor.withExtensionFilter(name, *extensions)
+    }
+    val result = CompletableFuture<List<Uri>>()
+    scope.launch {
+      withContext(Dispatchers.EDT) {
+        var files = FileChooser.chooseFiles(descriptor, project, null)
+        result.complete(files.map { Uri(it.path) }.toList())
+      }
+    }
+    return ThenableBuilder.create(nodeRuntime, result)
+  }
+
+  fun showSaveDialog(options: Map<String, Any>): Thenable/*<vscode.Uri>*/ {
+    LOG.info("showSaveDialog: $options")
+    val defaultUri = (options["defaultUri"] as Map<*, *>)["filePath"] as String
+    val filters = options["filters"] as Map<*, *>
+    val descriptor = FileSaverDescriptorFactory.createSingleFileNoJarsDescriptor().withTitle("Save File")
+    for (filter in filters) {
+      val name = filter.key as String
+      val extensionsList = filter.value as List<*>
+      val extensions = extensionsList.map { it as String }.toTypedArray()
+      descriptor.withExtensionFilter(name, *extensions)
+    }
+    val result = CompletableFuture<Uri?>()
+    scope.launch {
+      withContext(Dispatchers.EDT) {
+        var file = FileChooserFactory.getInstance().createSaveFileDialog(descriptor, project).save(defaultUri)
+        result.complete(file?.let { Uri(it.file.path) })
+      }
+    }
+    return ThenableBuilder.create(nodeRuntime, result)
   }
 
   override fun dispose() {

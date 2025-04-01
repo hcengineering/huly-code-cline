@@ -85,6 +85,7 @@ class ClineRuntimeService(
       for (file in rootThemesDir.children) {
         Files.copy(file.inputStream, runtimePath.resolve(file.name))
       }
+      RipGrepRuntime.init()
     }
   }
 

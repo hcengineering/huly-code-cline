@@ -17,7 +17,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-public class Webview implements Disposable {
+public class WebView implements Disposable {
   private final Project project;
   private final NodeRuntime nodeRuntime;
   private final JBCefBrowser browser;
@@ -28,19 +28,17 @@ public class Webview implements Disposable {
   private JBCefJSQuery setStateQuery;
   private V8ValueFunction onDidReceiveMessageListener;
 
-  public Webview(Project project, NodeRuntime nodeRuntime, JBCefBrowser browser) {
+  public WebView(Project project, NodeRuntime nodeRuntime, JBCefBrowser browser) {
     this.project = project;
     this.nodeRuntime = nodeRuntime;
     this.browser = browser;
   }
 
   public String getHtml() {
-    System.out.println("!!!!! getHtml");
     return html;
   }
 
   public void setHtml(String html) {
-    System.out.println("!!!!! setHtml " + html);
     this.html = html;
     if (browser != null) {
       postMessageQuery = JBCefJSQuery.create((JBCefBrowserBase)browser);
@@ -48,7 +46,6 @@ public class Webview implements Disposable {
       getStateQuery = JBCefJSQuery.create((JBCefBrowserBase)browser);
 
       postMessageQuery.addHandler((json) -> {
-        System.out.println("postMessageQuery json=" + json);
         project.getService(ClineRuntimeService.class).addMessage(onDidReceiveMessageListener, json);
         return null;
       });
@@ -85,12 +82,10 @@ public class Webview implements Disposable {
   }
 
   public V8Value getOptions() {
-    System.out.println("!!!!! getOptions");
     return options;
   }
 
   public void setOptions(V8Value options) {
-    System.out.println("!!!!! setOptions");
     this.options = options;
   }
 
@@ -116,6 +111,7 @@ public class Webview implements Disposable {
       }
     }
     ApplicationManager.getApplication().invokeLater(() -> {
+      assert browser != null;
       browser.getCefBrowser().executeJavaScript(
         String.format("window.postMessage(%s, \"*\");", msgHolder.get()),
         browser.getCefBrowser().getURL(),
@@ -126,7 +122,6 @@ public class Webview implements Disposable {
 
 
   public void onDidReceiveMessage(V8ValueFunction listener, V8Value args, V8Value disposable) {
-    System.out.println("!!!!! onDidReceiveMessage");
     onDidReceiveMessageListener = listener;
     try {
       onDidReceiveMessageListener.setWeak();
@@ -138,7 +133,6 @@ public class Webview implements Disposable {
   }
 
   public V8ValueObject asWebviewUri(@NotNull V8ValueObject uri) {
-    System.out.println("!!!!! asWebviewUri " + uri.toString());
     return uri;
   }
 

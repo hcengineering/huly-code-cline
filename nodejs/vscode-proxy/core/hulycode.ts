@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 
 export interface IHulyCode {
+  getPluginVersion(): string;
   getSecret(key: string): string | undefined;
   storeSecret(key: string, value: string): void;
   deleteSecret(key: string): void;
@@ -38,4 +39,11 @@ export interface IHulyCode {
 
   clipboardWriteText(text: string): void;
   clipboardReadText(): vscode.Thenable<string>;
+
+  showInformationMessage(message: string): void;
+  showWarningMessage(message: string, items: string[]): void;
+  showErrorMessage(message: string, items: string[]): void;
+
+  showOpenDialog(options?: vscode.OpenDialogOptions): vscode.Thenable<vscode.Uri[] | undefined>;
+  showSaveDialog(options?: vscode.SaveDialogOptions): vscode.Thenable<vscode.Uri | undefined>;
 }

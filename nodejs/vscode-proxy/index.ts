@@ -3,6 +3,7 @@ import { Range } from "./core/range";
 import { Position } from "./core/position";
 import { Selection } from "./core/selection";
 import { IHulyCode } from "./core/hulycode";
+import * as fs from "fs";
 
 export * from './core/range';
 export * from './core/selection';
@@ -114,8 +115,7 @@ export class Clipboard {
 export namespace env {
   // export const appName: string = "Huly Code";
 
-  // TODO: used in ripgrep need port ripgrep tools to HulyCode
-  export const appRoot: string = "";
+  export const appRoot: string = hulyCode.getGlobalStoragePath();
   // export const appHost: string = "desktop";
 
   export const uriScheme: string = "";
@@ -453,56 +453,26 @@ export namespace window {
   }
 
   export function showInformationMessage<T extends string>(message: string, ...items: T[]): Thenable<T | undefined> {
-    console.log(`showInformationMessage: ${message}`);
+    hulyCode.showInformationMessage(message);
     return Promise.resolve<any>(undefined);
   }
-
-  // export function showInformationMessage<T extends string>(message: string, options: MessageOptions, ...items: T[]): Thenable<T | undefined>;
-
-  // export function showInformationMessage<T extends MessageItem>(message: string, ...items: T[]): Thenable<T | undefined>;
-
-  // export function showInformationMessage<T extends MessageItem>(message: string, options: MessageOptions, ...items: T[]): Thenable<T | undefined>;
 
   export function showWarningMessage<T extends string>(message: string, ...items: T[]): Thenable<T | undefined> {
-    console.log(`showWarningMessage: ${message}`);
+    hulyCode.showWarningMessage(message, items);
     return Promise.resolve<any>(undefined);
   }
-
-  // export function showWarningMessage<T extends string>(message: string, options: MessageOptions, ...items: T[]): Thenable<T | undefined>;
-
-  // export function showWarningMessage<T extends MessageItem>(message: string, ...items: T[]): Thenable<T | undefined>;
-
-  // export function showWarningMessage<T extends MessageItem>(message: string, options: MessageOptions, ...items: T[]): Thenable<T | undefined>;
 
   export function showErrorMessage<T extends string>(message: string, ...items: T[]): Thenable<T | undefined> {
-    console.log(`showErrorMessage: ${message}`);
+    hulyCode.showErrorMessage(message, items);
     return Promise.resolve<any>(undefined);
   }
 
-  // export function showErrorMessage<T extends string>(message: string, options: MessageOptions, ...items: T[]): Thenable<T | undefined>;
-
-  // export function showErrorMessage<T extends MessageItem>(message: string, ...items: T[]): Thenable<T | undefined>;
-
-  // export function showErrorMessage<T extends MessageItem>(message: string, options: MessageOptions, ...items: T[]): Thenable<T | undefined>;
-
-  // export function showQuickPick(items: readonly string[] | Thenable<readonly string[]>, options: QuickPickOptions & { /** literal-type defines return type */canPickMany: true }, token?: CancellationToken): Thenable<string[] | undefined>;
-
-  // export function showQuickPick(items: readonly string[] | Thenable<readonly string[]>, options?: QuickPickOptions, token?: CancellationToken): Thenable<string | undefined>;
-
-  // export function showQuickPick<T extends QuickPickItem>(items: readonly T[] | Thenable<readonly T[]>, options: QuickPickOptions & { /** literal-type defines return type */ canPickMany: true }, token?: CancellationToken): Thenable<T[] | undefined>;
-
-  // export function showQuickPick<T extends QuickPickItem>(items: readonly T[] | Thenable<readonly T[]>, options?: QuickPickOptions, token?: CancellationToken): Thenable<T | undefined>;
-
-  // export function showWorkspaceFolderPick(options?: WorkspaceFolderPickOptions): Thenable<WorkspaceFolder | undefined>;
-
   export function showOpenDialog(options?: OpenDialogOptions): Thenable<Uri[] | undefined> {
-    console.log(`showOpenDialog: ${options}`);
-    return Promise.resolve<Uri[]>([]);
+    return hulyCode.showOpenDialog(options);
   }
 
   export function showSaveDialog(options?: SaveDialogOptions): Thenable<Uri | undefined> {
-    console.log(`showSaveDialog: ${options}`);
-    return Promise.resolve<Uri>(Uri.file("test.txt"));
+    return hulyCode.showSaveDialog(options);
   }
 
   // export function showInputBox(options?: InputBoxOptions, token?: CancellationToken): Thenable<string | undefined>;
@@ -929,24 +899,24 @@ export class HulyCodeFileSystem {
   // readFile(uri: Uri): Thenable<Uint8Array>;
 
   writeFile(uri: Uri, content: Uint8Array): Thenable<void> {
-    console.log(`writeFile: ${uri}`);
+    fs.writeFileSync(uri.fsPath, content);
     return Promise.resolve<any>(undefined);
   }
 
-  // delete(uri: Uri, options?: {
-  //     recursive?: boolean;
-  //     useTrash?: boolean;
-  // }): Thenable<void>;
+//   delete(uri: Uri, options?: {
+//       recursive?: boolean;
+//       useTrash?: boolean;
+//   }): Thenable<void>;
 
-  // rename(source: Uri, target: Uri, options?: {
-  //     overwrite?: boolean;
-  // }): Thenable<void>;
+//   rename(source: Uri, target: Uri, options?: {
+//       overwrite?: boolean;
+//   }): Thenable<void>;
 
   // copy(source: Uri, target: Uri, options?: {
   //     overwrite?: boolean;
   // }): Thenable<void>;
 
-  // isWritableFileSystem(scheme: string): boolean | undefined;
+//   isWritableFileSystem(scheme: string): boolean | undefined;
 }
 
 export interface WorkspaceConfiguration {
@@ -1198,8 +1168,11 @@ export class ExtensionContext {
 
   public extensionMode: ExtensionMode = ExtensionMode.Production;
 
-  // TODO: Used for version need provide version of HulyCode
-  public extension: any;
+  public extension: any = {
+    packageJSON: {
+      version: hulyCode.getPluginVersion()
+    }
+  };
 
   public log(msg: string) {
     hulyCode.log(msg);

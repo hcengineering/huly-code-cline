@@ -10,28 +10,26 @@ import com.intellij.openapi.util.Disposer;
 import com.intellij.ui.jcef.JBCefBrowser;
 
 public class WebviewView implements Disposable {
-  private Webview webview;
+  private final WebView webView;
 
   public WebviewView(Project project, NodeRuntime nodeRuntime, JBCefBrowser browser) {
-    webview = new Webview(project, nodeRuntime, browser);
+    webView = new WebView(project, nodeRuntime, browser);
   }
 
   public void onDidChangeVisibility(V8ValueFunction listener, V8Value args, V8Value[] disposables) {
-    System.out.println("!!!!! onDidChangeVisibility");
     return;
   }
 
   public Object onDidDispose(V8ValueFunction listener, V8Value args, V8Value[] disposables) {
-    System.out.println("!!!!! onDidDispose");
     return null;
   }
 
-  public Webview getWebview() {
-    return webview;
+  public WebView getWebview() {
+    return webView;
   }
 
   @Override
   public void dispose() {
-    Disposer.dispose(webview);
+    Disposer.dispose(webView);
   }
 }
