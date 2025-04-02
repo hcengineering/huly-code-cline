@@ -17,6 +17,7 @@ import com.hulylabs.intellij.plugins.cline.nodejs.vscode.WebviewView
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VfsUtil
@@ -49,9 +50,8 @@ class ClineRuntimeService(
   private val messageQueue = ArrayBlockingQueue<Pair<V8ValueFunction, String>>(100)
 
   companion object {
-    fun getInstance(project: Project): ClineRuntimeService {
-      return project.getService(ClineRuntimeService::class.java)
-    }
+    @JvmStatic
+    fun getInstance(project: Project): ClineRuntimeService = project.service()
   }
 
   fun activate(browser: JBCefBrowser) {
@@ -152,4 +152,20 @@ class ClineRuntimeService(
   fun addMessage(onDidReceiveMessageListener: V8ValueFunction, json: String) {
     messageQueue.offer(Pair(onDidReceiveMessageListener, json))
   }
+
+  fun clineAuthResponse(query: String) {
+    val parts = query.split('&').associate { it.split('=').let { Pair(it[0], it[1]) } }
+    val token = parts["token"]
+    val state = parts["state"]
+    val apiKey = parts["apiKey"]
+    logger.info("clineAuthResponse token=$token state=$state apiKey=$apiKey")
+    if (!token.isNullOrEmpty() && !apiKey.isNullOrEmpty()) {
+      moduleObject.invokeVoid("handleAuthCallback", token, apiKey)
+    }
+  }
+
+  fun newChat() {
+    moduleObject.invokeVoid("newChat", emptyArray<Object>())
+  }
+
 }

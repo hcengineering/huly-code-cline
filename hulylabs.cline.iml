@@ -32,6 +32,7 @@
     <orderEntry type="library" name="jediterm-core" level="project" />
     <orderEntry type="library" name="jediterm-ui" level="project" />
     <orderEntry type="library" name="pty4j" level="project" />
+    <orderEntry type="library" name="jna" level="project" />
     <orderEntry type="module-library">
       <library name="caoccao.javet" type="repository">
         <properties include-transitive-deps="false" maven-id="com.caoccao.javet:javet:4.1.1">

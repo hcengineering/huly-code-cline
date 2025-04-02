@@ -53,3 +53,7 @@ export async function newChat() {
     action: "chatButtonClicked",
   })
 }
+
+export async function handleAuthCallback(token: string, apiKey: string) {
+  await sidebarProvider.handleAuthCallback(token, apiKey)
+}

@@ -18,6 +18,7 @@
       implementation="com.hulylabs.intellij.plugins.cline.ClineToolWindowLayoutPlatformExtension"
       order="last"
     />
+    <protocolHandler implementation="com.hulylabs.intellij.plugins.cline.HulyCodeProtocolHandler"/>
     <notificationGroup id="Cline" displayType="BALLOON"/>
   </extensions>
 </idea-plugin>

@@ -1,14 +1,14 @@
 // Copyright © 2025 Huly Labs. Use of this source code is governed by the Apache 2.0 license.
 package com.hulylabs.intellij.plugins.cline
 
-import com.hulylabs.intellij.plugins.cline.actions.NewTaskAction
-import com.hulylabs.intellij.plugins.cline.actions.OpenHistoryAction
-import com.hulylabs.intellij.plugins.cline.actions.OpenMCPServersAction
-import com.hulylabs.intellij.plugins.cline.actions.OpenSettingsAction
+import com.hulylabs.intellij.plugins.cline.actions.*
 import com.hulylabs.intellij.plugins.cline.nodejs.ClineRuntimeService
 import com.intellij.ide.ui.LafManager
+import com.intellij.openapi.application.PathManager
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.jcef.JBCefBrowserBuilder
@@ -33,7 +33,13 @@ class ClineToolWindowFactory : ToolWindowFactory {
   override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
     val manager = toolWindow.contentManager
     val browser = JBCefBrowserBuilder().setEnableOpenDevToolsMenuItem(true).build()
-    toolWindow.setTitleActions(listOf(NewTaskAction(browser), OpenMCPServersAction(browser), OpenHistoryAction(browser), OpenSettingsAction(browser)))
+    toolWindow.setTitleActions(
+      listOf(NewTaskAction(),
+             OpenMCPServersAction(browser),
+             OpenHistoryAction(browser),
+             OpenAccountAction(browser),
+             OpenSettingsAction(browser)
+      ))
     browser.jbCefClient.setProperty(JBCefClient.Properties.JS_QUERY_POOL_SIZE, 10)
     CefApp.getInstance().registerSchemeHandlerFactory("http", "hulycline")
     { _, _, _, _ -> CustomResourceHandler() }
@@ -42,6 +48,32 @@ class ClineToolWindowFactory : ToolWindowFactory {
     clineRuntimeService.activate(browser)
     manager.addContent(manager.factory.createContent(browser.component, null, true).apply { isCloseable = false })
     Disposer.register(toolWindow.disposable, clineRuntimeService)
+    if (SystemInfo.isWindows) {
+      try {
+        val appPath = PathManager.getHomePath() + "\\bin\\huly-code64.exe"
+        val scheme = "huly-code"
+        var root = com.sun.jna.platform.win32.WinReg.HKEY_CURRENT_USER
+        if (!com.sun.jna.platform.win32.Advapi32Util.registryKeyExists(root, "SOFTWARE\\Classes\\$scheme")) {
+          com.sun.jna.platform.win32.Advapi32Util.registryCreateKey(root, "SOFTWARE\\Classes\\$scheme")
+          val protocolKey = com.sun.jna.platform.win32.Advapi32Util.registryGetKey(root, "SOFTWARE\\Classes\\$scheme", com.sun.jna.platform.win32.WinNT.KEY_WRITE)
+          com.sun.jna.platform.win32.Advapi32Util.registrySetStringValue(protocolKey.value, "", "URL:$scheme")
+          com.sun.jna.platform.win32.Advapi32Util.registrySetStringValue(protocolKey.value, "URL Protocol", "")
+          com.sun.jna.platform.win32.Advapi32Util.registryCloseKey(protocolKey.value)
+
+          com.sun.jna.platform.win32.Advapi32Util.registryCreateKey(root, "SOFTWARE\\Classes\\$scheme\\DefaultIcon")
+          val iconKey = com.sun.jna.platform.win32.Advapi32Util.registryGetKey(root, "SOFTWARE\\Classes\\$scheme\\DefaultIcon", com.sun.jna.platform.win32.WinNT.KEY_WRITE)
+          com.sun.jna.platform.win32.Advapi32Util.registrySetStringValue(iconKey.value, "", "$appPath,1")
+          com.sun.jna.platform.win32.Advapi32Util.registryCloseKey(iconKey.value)
+          com.sun.jna.platform.win32.Advapi32Util.registryCreateKey(root, "SOFTWARE\\Classes\\$scheme\\shell\\open\\command")
+          val commandKey = com.sun.jna.platform.win32.Advapi32Util.registryGetKey(root, "SOFTWARE\\Classes\\$scheme\\shell\\open\\command", com.sun.jna.platform.win32.WinNT.KEY_WRITE)
+          com.sun.jna.platform.win32.Advapi32Util.registrySetStringValue(commandKey.value, "", "\"$appPath\" \"%1\"")
+          com.sun.jna.platform.win32.Advapi32Util.registryCloseKey(commandKey.value)
+        }
+      }
+      catch (e: Exception) {
+        Logger.getInstance("#cline.protocol").error(e)
+      }
+    }
   }
 }
 

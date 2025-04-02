@@ -118,7 +118,7 @@ export namespace env {
   export const appRoot: string = hulyCode.getGlobalStoragePath();
   // export const appHost: string = "desktop";
 
-  export const uriScheme: string = "";
+  export const uriScheme: string = "huly-code";
   // export const language: string;
   // export const clipboard: Clipboard;
   export const machineId: string = "";
