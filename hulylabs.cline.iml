@@ -13,6 +13,25 @@
     <orderEntry type="library" name="kotlinx-serialization-core" level="project" />
     <orderEntry type="module" module-name="intellij.platform.core" />
     <orderEntry type="module" module-name="intellij.platform.util" />
+    <orderEntry type="module" module-name="intellij.platform.credentialStore" />
+    <orderEntry type="module" module-name="intellij.platform.util.ex" />
+    <orderEntry type="module" module-name="intellij.platform.ide" />
+    <orderEntry type="module" module-name="intellij.platform.ui.jcef" />
+    <orderEntry type="module" module-name="intellij.platform.core.ui" />
+    <orderEntry type="module" module-name="intellij.platform.util.ui" />
+    <orderEntry type="module" module-name="intellij.platform.analysis" />
+    <orderEntry type="module" module-name="intellij.platform.execution.impl" />
+    <orderEntry type="module" module-name="intellij.platform.execution" />
+    <orderEntry type="module" module-name="intellij.platform.ide.impl" />
+    <orderEntry type="module" module-name="intellij.platform.core.impl" />
+    <orderEntry type="module" module-name="intellij.platform.diff" />
+    <orderEntry type="module" module-name="intellij.platform.diff.impl" />
+    <orderEntry type="module" module-name="intellij.terminal" />
+    <orderEntry type="module" module-name="hulylabs.langconfigurator" />
+    <orderEntry type="module" module-name="redhat.lsp4ij" />
+    <orderEntry type="library" name="jediterm-core" level="project" />
+    <orderEntry type="library" name="jediterm-ui" level="project" />
+    <orderEntry type="library" name="pty4j" level="project" />
     <orderEntry type="module-library">
       <library name="caoccao.javet" type="repository">
         <properties include-transitive-deps="false" maven-id="com.caoccao.javet:javet:4.1.1">
@@ -49,26 +68,66 @@
         <SOURCES />
       </library>
     </orderEntry>
-    <orderEntry type="module" module-name="intellij.platform.credentialStore" />
-    <orderEntry type="module" module-name="intellij.platform.util.ex" />
-    <orderEntry type="module" module-name="intellij.platform.ide" />
-    <orderEntry type="module" module-name="intellij.platform.ui.jcef" />
-    <orderEntry type="module" module-name="intellij.platform.core.ui" />
-    <orderEntry type="module" module-name="intellij.platform.util.ui" />
-    <orderEntry type="module" module-name="intellij.platform.analysis" />
-    <orderEntry type="module" module-name="intellij.platform.execution.impl" />
-    <orderEntry type="module" module-name="intellij.terminal" />
-    <orderEntry type="library" name="jediterm-core" level="project" />
-    <orderEntry type="module" module-name="intellij.platform.execution" />
-    <orderEntry type="library" name="jediterm-ui" level="project" />
-    <orderEntry type="library" name="pty4j" level="project" />
-    <orderEntry type="module" module-name="intellij.platform.ide.impl" />
-    <orderEntry type="module" module-name="intellij.platform.core.impl" />
-    <orderEntry type="module" module-name="intellij.platform.diff" />
-    <orderEntry type="module" module-name="intellij.platform.diff.impl" />
-    <orderEntry type="module" module-name="redhat.lsp4ij" />
     <orderEntry type="module-library">
-      <library>
+      <library name="caoccao.javet.node.macos.arm64.i18n" type="repository">
+        <properties maven-id="com.caoccao.javet:javet-node-macos-arm64-i18n:4.1.1">
+          <verification>
+            <artifact url="file://$MAVEN_REPOSITORY$/com/caoccao/javet/javet-node-macos-arm64-i18n/4.1.1/javet-node-macos-arm64-i18n-4.1.1.jar">
+              <sha256sum>cbd1e9b47a3adda6b87c29fdcb4e234eb9b023a1f0496528ce6722a1b6a0013e</sha256sum>
+            </artifact>
+          </verification>
+        </properties>
+        <CLASSES>
+          <root url="jar://$MAVEN_REPOSITORY$/com/caoccao/javet/javet-node-macos-arm64-i18n/4.1.1/javet-node-macos-arm64-i18n-4.1.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library name="caoccao.javet.node.macos.x86_64.i18n" type="repository">
+        <properties maven-id="com.caoccao.javet:javet-node-macos-x86_64-i18n:4.1.1">
+          <verification>
+            <artifact url="file://$MAVEN_REPOSITORY$/com/caoccao/javet/javet-node-macos-x86_64-i18n/4.1.1/javet-node-macos-x86_64-i18n-4.1.1.jar">
+              <sha256sum>5180a03e2d40fc1de6ed60064d9f9f387a49b1ce3bbb9f99d24584a57b77ba75</sha256sum>
+            </artifact>
+          </verification>
+        </properties>
+        <CLASSES>
+          <root url="jar://$MAVEN_REPOSITORY$/com/caoccao/javet/javet-node-macos-x86_64-i18n/4.1.1/javet-node-macos-x86_64-i18n-4.1.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library name="caoccao.javet.node.linux.x86_64.i18n" type="repository">
+        <properties maven-id="com.caoccao.javet:javet-node-linux-x86_64-i18n:4.1.1">
+          <verification>
+            <artifact url="file://$MAVEN_REPOSITORY$/com/caoccao/javet/javet-node-linux-x86_64-i18n/4.1.1/javet-node-linux-x86_64-i18n-4.1.1.jar">
+              <sha256sum>aaf75e0f4bb459e277f73c3dfaeb826e3f2f6a6e40c0519bd266b01843291daa</sha256sum>
+            </artifact>
+          </verification>
+        </properties>
+        <CLASSES>
+          <root url="jar://$MAVEN_REPOSITORY$/com/caoccao/javet/javet-node-linux-x86_64-i18n/4.1.1/javet-node-linux-x86_64-i18n-4.1.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library name="eclipse.lsp4j" type="repository">
+        <properties maven-id="org.eclipse.lsp4j:org.eclipse.lsp4j:0.21.1">
+          <verification>
+            <artifact url="file://$MAVEN_REPOSITORY$/org/eclipse/lsp4j/org.eclipse.lsp4j/0.21.1/org.eclipse.lsp4j-0.21.1.jar">
+              <sha256sum>e94b3fa0e5b62eca1970984bb7fd87fc1d2e3f6ca46c3729bb2533f2aade5342</sha256sum>
+            </artifact>
+            <artifact url="file://$MAVEN_REPOSITORY$/org/eclipse/lsp4j/org.eclipse.lsp4j.jsonrpc/0.21.1/org.eclipse.lsp4j.jsonrpc-0.21.1.jar">
+              <sha256sum>a1ed2343f91d290d71dd94f901f13bfdc69c3d36db52a383d8a80f5f432e4358</sha256sum>
+            </artifact>
+          </verification>
+        </properties>
         <CLASSES>
           <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/lsp4j/org.eclipse.lsp4j/0.21.1/org.eclipse.lsp4j-0.21.1.jar!/" />
           <root url="jar://$MAVEN_REPOSITORY$/org/eclipse/lsp4j/org.eclipse.lsp4j.jsonrpc/0.21.1/org.eclipse.lsp4j.jsonrpc-0.21.1.jar!/" />
@@ -80,6 +139,5 @@
         </SOURCES>
       </library>
     </orderEntry>
-    <orderEntry type="module" module-name="hulylabs.langconfigurator" />
   </component>
 </module>

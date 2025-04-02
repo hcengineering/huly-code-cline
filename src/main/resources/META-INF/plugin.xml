@@ -10,9 +10,11 @@
 
   <depends>com.intellij.modules.platform</depends>
   <depends>com.intellij.modules.lang</depends>
+  <depends>hulylabs.hulycode.plugins.hulylangconfigurator</depends>
+  <depends>com.redhat.devtools.lsp4ij</depends>
   <extensions defaultExtensionNs="com.intellij">
     <!--<postStartupActivity implementation="com.hulylabs.intellij.plugins.cline.AppStarter"/>-->
-    <toolWindow id="Cline" anchor="right" icon="/icons/panel_icon.svg"
+    <toolWindow id="Cline" anchor="left" icon="/icons/panel_icon.svg"
                 factoryClass="com.hulylabs.intellij.plugins.cline.ClineToolWindowFactory"/>
     <notificationGroup id="Cline" displayType="BALLOON"/>
   </extensions>
