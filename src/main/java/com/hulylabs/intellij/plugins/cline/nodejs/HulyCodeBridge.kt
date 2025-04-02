@@ -31,7 +31,6 @@ import com.intellij.ide.BrowserUtil
 import com.intellij.ide.actions.OpenFileAction
 import com.intellij.ide.actions.RevealFileAction
 import com.intellij.ide.passwordSafe.PasswordSafe
-import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.ide.ui.LafManager
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
@@ -42,7 +41,6 @@ import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.application.ex.ClipboardUtil
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.fileChooser.FileChooserFactory
@@ -94,7 +92,8 @@ internal constructor(
   }
 
   fun getPluginVersion(): String {
-    return PluginManagerCore.getPlugin(PluginId.getId("com.hulylabs.cline"))?.version ?: "1.0.0"
+    // TODO: Don`t forget to update this version according to Cline version or move it to properties file
+    return "3.8.3"
   }
 
   fun log(message: String?) {
