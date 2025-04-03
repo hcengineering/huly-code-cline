@@ -4,7 +4,7 @@ package com.hulylabs.intellij.plugins.cline.nodejs
 import com.caoccao.javet.interop.NodeRuntime
 import com.caoccao.javet.values.V8Value
 import com.caoccao.javet.values.reference.V8ValueFunction
-import com.hulylabs.intellij.plugins.cline.ClineConfiguration
+import com.hulylabs.intellij.plugins.cline.settings.ClineConfiguration
 import com.hulylabs.intellij.plugins.cline.nodejs.vscode.Extension
 import com.hulylabs.intellij.plugins.cline.nodejs.vscode.FileDiagnostic
 import com.hulylabs.intellij.plugins.cline.nodejs.vscode.Tab
@@ -108,27 +108,36 @@ internal constructor(
       return path.toString()
     }
 
-  fun getSecret(key: String): String? {
+  fun getSecret(key: String): Thenable/*<String?>*/ {
     LOG.debug("getSecret key=$key")
     val attributes = CredentialAttributes(generateServiceName("Cline", key))
     val passwordSafe = PasswordSafe.Companion.instance
-    return passwordSafe.getPassword(attributes)
+    val result = CompletableFuture<String?>()
+    passwordSafe.getAsync(attributes).onSuccess { password ->
+      result.complete(password?.password.toString())
+    }.onError {  error ->
+      LOG.error("getSecret error", error)
+      result.completeExceptionally(error)
+    }
+    return ThenableBuilder.create(nodeRuntime, result)
   }
 
-  fun storeSecret(key: String, value: String?) {
+  fun storeSecret(key: String, value: String?): Thenable/*<void>*/ {
     LOG.debug("storeSecret key=$key")
     val attributes = CredentialAttributes(generateServiceName("Cline", key))
     val passwordSafe = PasswordSafe.Companion.instance
     val credentials = Credentials("", value)
     passwordSafe[attributes, credentials] = false
+    return ThenableBuilder.createCompleted(nodeRuntime, Unit)
   }
 
   @JvmName("deleteSecret")
-  fun deleteSecret(key: String) {
+  fun deleteSecret(key: String): Thenable/*<void>*/ {
     LOG.debug("deleteSecret key=$key")
     val passwordSafe = PasswordSafe.Companion.instance
     val attributes = CredentialAttributes(generateServiceName("Cline", key))
     passwordSafe[attributes, null] = false
+    return ThenableBuilder.createCompleted(nodeRuntime, Unit)
   }
 
   fun getConfiguration(section: String?, key: String?): String? {
@@ -145,20 +154,21 @@ internal constructor(
       }
     }
     val fullKey = "$section.$key"
-    if (fullKey == "cline.enableCheckpoints") {
-      return "true"
+    if (section?.startsWith("cline") == true) {
+      // return with default value if not set
+      return ClineConfiguration.Companion.getInstance().get(fullKey)
     }
-    return ClineConfiguration.Companion.getInstance().workspaceParams.get(fullKey)
+    return ClineConfiguration.Companion.getInstance().workspaceParams[fullKey]
   }
 
   fun hasConfiguration(section: String?, key: String?): Boolean {
     LOG.info("hasConfiguration section=$section key=$key")
-    return ClineConfiguration.Companion.getInstance().workspaceParams.containsKey(section + "." + key)
+    return ClineConfiguration.Companion.getInstance().workspaceParams.containsKey("$section.$key")
   }
 
   fun updateConfiguration(section: String?, key: String?, value: String?, force: Boolean?) {
     LOG.info("updateConfiguration section=$section key=$key value=$value")
-    ClineConfiguration.Companion.getInstance().workspaceParams.put(section + "." + key, value!!)
+    ClineConfiguration.Companion.getInstance().workspaceParams.put("$section.$key", value!!)
   }
 
   fun getExtension(extensionId: String?): Extension {

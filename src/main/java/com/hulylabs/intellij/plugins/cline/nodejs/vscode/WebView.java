@@ -9,6 +9,7 @@ import com.caoccao.javet.values.reference.V8ValueObject;
 import com.hulylabs.intellij.plugins.cline.nodejs.ClineRuntimeService;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.options.ShowSettingsUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.ui.jcef.JBCefBrowser;
 import com.intellij.ui.jcef.JBCefBrowserBase;
@@ -45,8 +46,14 @@ public class WebView implements Disposable {
       setStateQuery = JBCefJSQuery.create((JBCefBrowserBase)browser);
       getStateQuery = JBCefJSQuery.create((JBCefBrowserBase)browser);
 
-      postMessageQuery.addHandler((json) -> {
-        project.getService(ClineRuntimeService.class).addMessage(onDidReceiveMessageListener, json);
+      postMessageQuery.addHandler((jsonStr) -> {
+        if (jsonStr.contains("openExtensionSettings")) {
+          ApplicationManager.getApplication().invokeLater(() -> {
+            ShowSettingsUtil.getInstance().showSettingsDialog(project, "Cline");
+          });
+          return null;
+        }
+        ClineRuntimeService.getInstance(project).addMessage(onDidReceiveMessageListener, jsonStr);
         return null;
       });
 

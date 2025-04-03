@@ -6,9 +6,10 @@ import com.hulylabs.intellij.plugins.cline.nodejs.vscode.core.Thenable
 import com.hulylabs.intellij.plugins.cline.nodejs.vscode.core.ThenableBuilder
 import com.intellij.diff.editor.DiffEditorViewerFileEditor
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.writeText
+import java.util.concurrent.CompletableFuture
 
 class DiffTextDocument(
   private val project: Project,
@@ -26,13 +27,14 @@ class DiffTextDocument(
   }
 
   override fun save(): Thenable/*<Boolean>*/ {
-    val origDocument = editor.getEmbeddedEditors().first().document
     val diffDocument = editor.getEmbeddedEditors().last().document
+    val result = CompletableFuture<Boolean>()
     WriteCommandAction.writeCommandAction(project).run<Exception> {
-      origDocument.setText(diffDocument.text)
-      FileDocumentManager.getInstance().saveDocument(origDocument)
-      getEditorFile().refresh(true, true)
+      val text = diffDocument.text
+      val file = getEditorFile()
+      file.writeText(text)
+      result.complete(true)
     }
-    return ThenableBuilder.createCompleted(nodeRuntime, nodeRuntime.createV8ValueBoolean(true))
+    return ThenableBuilder.create(nodeRuntime, result)
   }
 }

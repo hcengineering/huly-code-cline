@@ -1180,16 +1180,14 @@ export class ExtensionContext {
 
   readonly secrets: SecretStorage = {
     get: function(key: string): Thenable<string | undefined> {
-      return Promise.resolve(hulyCode.getSecret(key));
+      return hulyCode.getSecret(key);
     },
     store: function(key: string, value: string): Thenable<void> {
-      hulyCode.storeSecret(key, value);
-      return Promise.resolve();
+      return hulyCode.storeSecret(key, value);
     },
 
     delete: function(key: string): Thenable<void> {
-      hulyCode.deleteSecret(key);
-      return Promise.resolve();
+      return hulyCode.deleteSecret(key);
     }
   };
 

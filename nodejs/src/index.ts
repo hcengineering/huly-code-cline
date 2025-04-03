@@ -54,6 +54,10 @@ export async function newChat() {
   })
 }
 
-export async function handleAuthCallback(token: string, apiKey: string) {
+export async function handleAuthCallback(state: string, token: string, apiKey: string) {
+  if (!(await sidebarProvider.validateAuthState(state))) {
+    vscode.window.showErrorMessage("Invalid auth state")
+    return
+  }
   await sidebarProvider.handleAuthCallback(token, apiKey)
 }

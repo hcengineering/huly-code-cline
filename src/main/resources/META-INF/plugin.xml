@@ -10,6 +10,7 @@
   <depends>com.intellij.modules.lang</depends>
   <depends>hulylabs.hulycode.plugins.hulylangconfigurator</depends>
   <depends>com.redhat.devtools.lsp4ij</depends>
+
   <extensions defaultExtensionNs="com.intellij">
     <toolWindow id="Cline" anchor="left" icon="/icons/panel_icon.svg"
                 factoryClass="com.hulylabs.intellij.plugins.cline.ClineToolWindowFactory"/>
@@ -19,6 +20,11 @@
       order="last"
     />
     <protocolHandler implementation="com.hulylabs.intellij.plugins.cline.HulyCodeProtocolHandler"/>
-    <notificationGroup id="Cline" displayType="BALLOON"/>
+    <applicationConfigurable
+      groupId="tools"
+      displayName="Cline"
+      id="com.hulylabs.intellij.plugins.cline.settings.ClineSettingsConfigurable"
+      instance="com.hulylabs.intellij.plugins.cline.settings.ClineSettingsConfigurable"/>
   </extensions>
+
 </idea-plugin>

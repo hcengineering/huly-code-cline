@@ -2,9 +2,9 @@ import * as vscode from "vscode";
 
 export interface IHulyCode {
   getPluginVersion(): string;
-  getSecret(key: string): string | undefined;
-  storeSecret(key: string, value: string): void;
-  deleteSecret(key: string): void;
+  getSecret(key: string): vscode.Thenable<string | undefined>;
+  storeSecret(key: string, value: string): vscode.Thenable<void>;
+  deleteSecret(key: string): vscode.Thenable<void>;
   getGlobalStoragePath: () => string;
   log(msg: string): void;
 

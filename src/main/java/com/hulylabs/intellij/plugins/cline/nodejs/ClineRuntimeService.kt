@@ -158,9 +158,9 @@ class ClineRuntimeService(
     val token = parts["token"]
     val state = parts["state"]
     val apiKey = parts["apiKey"]
-    logger.info("clineAuthResponse token=$token state=$state apiKey=$apiKey")
-    if (!token.isNullOrEmpty() && !apiKey.isNullOrEmpty()) {
-      moduleObject.invokeVoid("handleAuthCallback", token, apiKey)
+    logger.debug("clineAuthResponse")
+    if (!state.isNullOrEmpty() && !token.isNullOrEmpty() && !apiKey.isNullOrEmpty()) {
+      moduleObject.invokeVoid("handleAuthCallback", state, token, apiKey)
     }
   }
 
