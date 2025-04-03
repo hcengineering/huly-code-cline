@@ -3,20 +3,17 @@ package com.hulylabs.intellij.plugins.cline.settings
 
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.ui.ComboBox
+import com.intellij.openapi.ui.TextFieldWithBrowseButton
 import com.intellij.ui.SimpleListCellRenderer
 import com.intellij.ui.components.JBCheckBox
-import com.intellij.ui.components.JBLabel
 import com.intellij.ui.dsl.builder.panel
-import com.intellij.ui.dsl.builder.whenItemSelectedFromUi
-import com.intellij.util.ui.JBUI
-import com.intellij.util.ui.UIUtil
 import javax.swing.JComponent
 import javax.swing.JList
 
 class ClineSettingsConfigurable : Configurable {
   private val settings = ClineConfiguration.getInstance()
   private var workspaceSettings = settings.workspaceParams
-  private lateinit var chromePathField: String
+  private lateinit var chromePathField: TextFieldWithBrowseButton
   private lateinit var disableBrowserCheckbox: JBCheckBox
   private lateinit var enableCheckpointsCheckbox: JBCheckBox
   private lateinit var mcpModeCombo: ComboBox<McpMode>
@@ -28,8 +25,6 @@ class ClineSettingsConfigurable : Configurable {
 
   override fun createComponent(): JComponent {
     return panel {
-      lateinit var descriptionLabel: JBLabel
-
       group("Workspace Settings") {
         row {
           checkBox("Enable checkpoints")
@@ -43,12 +38,11 @@ class ClineSettingsConfigurable : Configurable {
 
       group("Browser Settings") {
         row("Chrome executable path:") {
-          textFieldWithBrowseButton("Select Chrome Executable", fileChosen = {
-            chromePathField = it.path
+          chromePathField = textFieldWithBrowseButton("Select Chrome Executable", fileChosen = {
             return@textFieldWithBrowseButton it.path
           }).comment(
             "Path to Chrome executable for browser use functionality. If not set, the extension will attempt to find or download it automatically."
-          )
+          ).component
         }
         row {
           checkBox("Disable browser tool")
@@ -72,18 +66,6 @@ class ClineSettingsConfigurable : Configurable {
                 }
               }
             }
-            .whenItemSelectedFromUi { selectedMode ->
-              descriptionLabel.text = selectedMode.description
-            }
-        }
-        row {
-          descriptionLabel = JBLabel()
-            .apply {
-              foreground = UIUtil.getContextHelpForeground()
-              text = McpMode.entries.first().description
-              border = JBUI.Borders.empty(4, 20, 4, 0)
-            }
-          cell(descriptionLabel)
         }
         row {
           checkBox("Enable MCP marketplace")
@@ -113,7 +95,7 @@ class ClineSettingsConfigurable : Configurable {
   }
 
   override fun isModified(): Boolean {
-    return chromePathField != settings.get("cline.chromeExecutablePath") ||
+    return chromePathField.text != settings.get("cline.chromeExecutablePath") ||
            disableBrowserCheckbox.isSelected != settings.get("cline.disableBrowserTool").toBoolean() ||
            enableCheckpointsCheckbox.isSelected != settings.get("cline.enableCheckpoints").toBoolean() ||
            mcpModeCombo.selectedItem != McpMode.forName(settings.get("cline.mcp.mode")) ||
@@ -123,7 +105,7 @@ class ClineSettingsConfigurable : Configurable {
   }
 
   override fun apply() {
-    workspaceSettings.put("cline.chromeExecutablePath", chromePathField)
+    workspaceSettings.put("cline.chromeExecutablePath", chromePathField.text)
     workspaceSettings.put("cline.disableBrowserTool", disableBrowserCheckbox.isSelected.toString())
     workspaceSettings.put("cline.enableCheckpoints", enableCheckpointsCheckbox.isSelected.toString())
     workspaceSettings.put("cline.mcp.mode", (mcpModeCombo.selectedItem as McpMode).displayName)
@@ -133,7 +115,7 @@ class ClineSettingsConfigurable : Configurable {
   }
 
   override fun reset() {
-    chromePathField = settings.get("cline.chromeExecutablePath")
+    chromePathField.text = settings.get("cline.chromeExecutablePath")
     disableBrowserCheckbox.isSelected = settings.get("cline.disableBrowserTool").toBoolean()
     enableCheckpointsCheckbox.isSelected = settings.get("cline.enableCheckpoints").toBoolean()
     mcpModeCombo.selectedItem = McpMode.forName(settings.get("cline.mcp.mode"))

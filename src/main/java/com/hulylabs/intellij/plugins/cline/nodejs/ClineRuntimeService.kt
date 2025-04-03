@@ -110,7 +110,7 @@ class ClineRuntimeService(
           moduleObject.setWeak()
           moduleObject.invokeVoid("activate", emptyArray<Object>())
           while (started.get()) {
-            nodeRuntime.await(V8AwaitMode.RunOnce)
+            nodeRuntime.await(V8AwaitMode.RunNoWait)
             Thread.sleep(10)
             val message = messageQueue.poll(10, TimeUnit.MILLISECONDS)
             if (message != null) {

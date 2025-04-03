@@ -7,6 +7,6 @@ enum class ReasoningEffort(val displayName: String) {
   HIGH("high");
 
   companion object {
-    fun forName(name: String) = McpMode.entries.find{ it.displayName == name }
+    fun forName(name: String) = ReasoningEffort.entries.find{ it.displayName == name }
   }
 }

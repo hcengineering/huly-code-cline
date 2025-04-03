@@ -22,6 +22,6 @@ enum class Language(val displayName: String) {
   TURKISH("Turkish - Türkçe");
 
   companion object {
-    fun forName(name: String) = McpMode.entries.find{ it.displayName == name }
+    fun forName(name: String) = Language.entries.find{ it.displayName == name }
   }
 }
