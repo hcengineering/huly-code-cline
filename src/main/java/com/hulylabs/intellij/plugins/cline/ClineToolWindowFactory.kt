@@ -3,7 +3,10 @@ package com.hulylabs.intellij.plugins.cline
 
 import com.hulylabs.intellij.plugins.cline.actions.*
 import com.hulylabs.intellij.plugins.cline.nodejs.ClineRuntimeService
+import com.intellij.ide.BrowserUtil
 import com.intellij.ide.ui.LafManager
+import com.intellij.ide.ui.LafManagerListener
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
@@ -11,6 +14,7 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
+import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBuilder
 import com.intellij.ui.jcef.JBCefClient
 import com.intellij.ui.jcef.JBCefScrollbarsHelper
@@ -18,7 +22,10 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.cef.CefApp
+import org.cef.browser.CefBrowser
+import org.cef.browser.CefFrame
 import org.cef.callback.CefCallback
+import org.cef.handler.CefRequestHandlerAdapter
 import org.cef.handler.CefResourceHandler
 import org.cef.misc.IntRef
 import org.cef.misc.StringRef
@@ -28,7 +35,7 @@ import java.io.IOException
 import java.io.InputStream
 import kotlin.math.min
 
-class ClineToolWindowFactory : ToolWindowFactory {
+class ClineToolWindowFactory() : ToolWindowFactory {
 
   override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
     val manager = toolWindow.contentManager
@@ -40,7 +47,24 @@ class ClineToolWindowFactory : ToolWindowFactory {
              OpenAccountAction(browser),
              OpenSettingsAction(browser)
       ))
-    browser.jbCefClient.setProperty(JBCefClient.Properties.JS_QUERY_POOL_SIZE, 10)
+    browser.jbCefClient.setProperty(JBCefClient.Properties.JS_QUERY_POOL_SIZE, 100)
+    browser.jbCefClient.addRequestHandler(object : CefRequestHandlerAdapter() {
+      override fun onBeforeBrowse(
+        browser: CefBrowser?,
+        frame: CefFrame?,
+        request: CefRequest?,
+        userGesture: Boolean,
+        isRedirect: Boolean,
+      ): Boolean {
+        val url = request?.url ?: return false
+
+        if (!url.startsWith("http://hulycline/")) {
+          BrowserUtil.browse(url)
+          return true
+        }
+        return false
+      }
+    }, browser.cefBrowser)
     CefApp.getInstance().registerSchemeHandlerFactory("http", "hulycline")
     { _, _, _, _ -> CustomResourceHandler() }
     //browser.openDevtools()
@@ -48,32 +72,55 @@ class ClineToolWindowFactory : ToolWindowFactory {
     clineRuntimeService.activate(browser)
     manager.addContent(manager.factory.createContent(browser.component, null, true).apply { isCloseable = false })
     Disposer.register(toolWindow.disposable, clineRuntimeService)
-    if (SystemInfo.isWindows) {
-      try {
-        val appPath = PathManager.getHomePath() + "\\bin\\huly-code64.exe"
-        val scheme = "huly-code"
-        var root = com.sun.jna.platform.win32.WinReg.HKEY_CURRENT_USER
-        if (!com.sun.jna.platform.win32.Advapi32Util.registryKeyExists(root, "SOFTWARE\\Classes\\$scheme")) {
-          com.sun.jna.platform.win32.Advapi32Util.registryCreateKey(root, "SOFTWARE\\Classes\\$scheme")
-          val protocolKey = com.sun.jna.platform.win32.Advapi32Util.registryGetKey(root, "SOFTWARE\\Classes\\$scheme", com.sun.jna.platform.win32.WinNT.KEY_WRITE)
-          com.sun.jna.platform.win32.Advapi32Util.registrySetStringValue(protocolKey.value, "", "URL:$scheme")
-          com.sun.jna.platform.win32.Advapi32Util.registrySetStringValue(protocolKey.value, "URL Protocol", "")
-          com.sun.jna.platform.win32.Advapi32Util.registryCloseKey(protocolKey.value)
-
-          com.sun.jna.platform.win32.Advapi32Util.registryCreateKey(root, "SOFTWARE\\Classes\\$scheme\\DefaultIcon")
-          val iconKey = com.sun.jna.platform.win32.Advapi32Util.registryGetKey(root, "SOFTWARE\\Classes\\$scheme\\DefaultIcon", com.sun.jna.platform.win32.WinNT.KEY_WRITE)
-          com.sun.jna.platform.win32.Advapi32Util.registrySetStringValue(iconKey.value, "", "$appPath,1")
-          com.sun.jna.platform.win32.Advapi32Util.registryCloseKey(iconKey.value)
-          com.sun.jna.platform.win32.Advapi32Util.registryCreateKey(root, "SOFTWARE\\Classes\\$scheme\\shell\\open\\command")
-          val commandKey = com.sun.jna.platform.win32.Advapi32Util.registryGetKey(root, "SOFTWARE\\Classes\\$scheme\\shell\\open\\command", com.sun.jna.platform.win32.WinNT.KEY_WRITE)
-          com.sun.jna.platform.win32.Advapi32Util.registrySetStringValue(commandKey.value, "", "\"$appPath\" \"%1\"")
-          com.sun.jna.platform.win32.Advapi32Util.registryCloseKey(commandKey.value)
+    registerUrlProtocol()
+    ApplicationManager.getApplication().messageBus
+      .connect(toolWindow.disposable)
+      .subscribe(LafManagerListener.TOPIC, object : LafManagerListener {
+        override fun lookAndFeelChanged(source: LafManager) {
+          reloadStyles(browser)
         }
-      }
-      catch (e: Exception) {
-        Logger.getInstance("#cline.protocol").error(e)
+      })
+  }
+
+  private fun registerUrlProtocol() {
+    if (!SystemInfo.isWindows) {
+      return
+    }
+
+    try {
+      val appPath = PathManager.getHomePath() + "\\bin\\huly-code64.exe"
+      val scheme = "huly-code"
+      var root = com.sun.jna.platform.win32.WinReg.HKEY_CURRENT_USER
+      if (!com.sun.jna.platform.win32.Advapi32Util.registryKeyExists(root, "SOFTWARE\\Classes\\$scheme")) {
+        com.sun.jna.platform.win32.Advapi32Util.registryCreateKey(root, "SOFTWARE\\Classes\\$scheme")
+        val protocolKey = com.sun.jna.platform.win32.Advapi32Util.registryGetKey(root, "SOFTWARE\\Classes\\$scheme", com.sun.jna.platform.win32.WinNT.KEY_WRITE)
+        com.sun.jna.platform.win32.Advapi32Util.registrySetStringValue(protocolKey.value, "", "URL:$scheme")
+        com.sun.jna.platform.win32.Advapi32Util.registrySetStringValue(protocolKey.value, "URL Protocol", "")
+        com.sun.jna.platform.win32.Advapi32Util.registryCloseKey(protocolKey.value)
+
+        com.sun.jna.platform.win32.Advapi32Util.registryCreateKey(root, "SOFTWARE\\Classes\\$scheme\\DefaultIcon")
+        val iconKey = com.sun.jna.platform.win32.Advapi32Util.registryGetKey(root, "SOFTWARE\\Classes\\$scheme\\DefaultIcon", com.sun.jna.platform.win32.WinNT.KEY_WRITE)
+        com.sun.jna.platform.win32.Advapi32Util.registrySetStringValue(iconKey.value, "", "$appPath,1")
+        com.sun.jna.platform.win32.Advapi32Util.registryCloseKey(iconKey.value)
+        com.sun.jna.platform.win32.Advapi32Util.registryCreateKey(root, "SOFTWARE\\Classes\\$scheme\\shell\\open\\command")
+        val commandKey = com.sun.jna.platform.win32.Advapi32Util.registryGetKey(root, "SOFTWARE\\Classes\\$scheme\\shell\\open\\command", com.sun.jna.platform.win32.WinNT.KEY_WRITE)
+        com.sun.jna.platform.win32.Advapi32Util.registrySetStringValue(commandKey.value, "", "\"$appPath\" \"%1\"")
+        com.sun.jna.platform.win32.Advapi32Util.registryCloseKey(commandKey.value)
       }
     }
+    catch (e: Exception) {
+      Logger.getInstance("#cline.protocol").error(e)
+    }
+  }
+
+  private fun reloadStyles(browser: JBCefBrowser) {
+    browser.cefBrowser.executeJavaScript("""
+      document.querySelectorAll("link[rel=stylesheet]").forEach(
+        link => {
+          link.href = link.href.replace(/\?.*|$\{'$'\}/, "?" + Date.now());
+        }
+      )
+    """.trimIndent(), browser.cefBrowser.url, 0)
   }
 }
 

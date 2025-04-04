@@ -22,9 +22,9 @@ data class Range(
                    map["endLineNumber"].smartToInt(),
                    map["endColumn"].smartToInt(),
                    @Suppress("UNCHECKED_CAST")
-                   Position.fromMap(map["start"] as Map<String, Any>),
+                   if (map["start"] is Position) map["start"] as Position else Position.fromMap(map["start"] as Map<String, Any>),
                    @Suppress("UNCHECKED_CAST")
-                   Position.fromMap(map["end"] as Map<String, Any>))
+                   if (map["end"] is Position) map["end"] as Position else Position.fromMap(map["end"] as Map<String, Any>))
     }
   }
 }

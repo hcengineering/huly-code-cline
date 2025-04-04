@@ -360,9 +360,14 @@ internal constructor(
   }
 
   fun applyWorkspaceEdit(edit: Map<String, Any>): Thenable/*<boolean>*/ {
-    val workspaceEdit = WorkspaceEdit.fromMap(edit)
-    activeDiffEditor?.applyEdit(workspaceEdit)
-    return ThenableBuilder.createCompleted(nodeRuntime, nodeRuntime.createV8ValueBoolean(true))
+    try {
+      val workspaceEdit = WorkspaceEdit.fromMap(edit)
+      activeDiffEditor?.applyEdit(workspaceEdit)
+      return ThenableBuilder.createCompleted(nodeRuntime, nodeRuntime.createV8ValueBoolean(true))
+    } catch (e: Exception) {
+      LOG.error(e)
+      return ThenableBuilder.createCompleted(nodeRuntime, nodeRuntime.createV8ValueBoolean(false))
+    }
   }
 
   private fun openTextFile(uri: Map<String, Any>, needDocument: Boolean): Thenable {

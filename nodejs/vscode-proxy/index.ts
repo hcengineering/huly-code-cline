@@ -361,7 +361,7 @@ export namespace window {
       return [{
         isActive: true,
         viewColumn: ViewColumn.One,
-        tabs: hulyCode.getTabs().map((tab) => {
+        tabs: hulyCode.getTabs().length == 0 ? [] : hulyCode.getTabs().map((tab) => {
           var input = tab.isDiff() ? new TabInputTextDiff(Uri.file(tab.path)) : new TabInputText(Uri.file(tab.path));
           return {
             label: tab.path,

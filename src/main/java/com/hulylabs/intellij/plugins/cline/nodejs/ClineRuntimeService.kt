@@ -167,5 +167,4 @@ class ClineRuntimeService(
   fun newChat() {
     moduleObject.invokeVoid("newChat", emptyArray<Object>())
   }
-
 }
