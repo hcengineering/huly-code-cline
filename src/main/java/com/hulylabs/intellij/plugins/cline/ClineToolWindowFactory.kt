@@ -18,9 +18,6 @@ import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBuilder
 import com.intellij.ui.jcef.JBCefClient
 import com.intellij.ui.jcef.JBCefScrollbarsHelper
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import org.cef.CefApp
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
@@ -33,6 +30,7 @@ import org.cef.network.CefRequest
 import org.cef.network.CefResponse
 import java.io.IOException
 import java.io.InputStream
+import javax.swing.UIManager
 import kotlin.math.min
 
 class ClineToolWindowFactory() : ToolWindowFactory {
@@ -195,45 +193,17 @@ class CustomResourceHandler : CefResourceHandler {
   }
 
   fun generateVsCodeCss(): String {
-    val isDark = LafManager.getInstance().getCurrentUIThemeLookAndFeel().isDark
-    val themePath = "/vscode-themes/${if (isDark) "OneDark-Pro" else "OneLight"}.json"
-    var themeContent = CustomResourceHandler::class.java.getResource(themePath)!!.readText()
-    var keys = mutableSetOf<String>()
-    val css = convertVsCodeTheme(themeContent, keys)
-    return ":root {\n $css ${JBCefScrollbarsHelper.buildScrollbarsStyle()} \n }"
-  }
-
-  fun convertVsCodeTheme(themeContent: String, keys: MutableSet<String>): String {
-    var result = ""
-    var obj = Json.parseToJsonElement(themeContent).jsonObject
-    if (obj.containsKey("colors")) {
-      val colors = obj["colors"]!!.jsonObject
-      for (key in colors.keys) {
-        if (!keys.contains(key)) {
-          keys.add(key)
-        }
-        else {
-          continue
-        }
-        val value = colors[key]!!.jsonPrimitive.content
-        if (key == "editor.foreground") {
-          result += "  color: $value;\n"
-        }
-        else if (key == "editor.background") {
-          result += "  background-color: $value;\n"
-        }
-        result += "  --vscode-${key.replaceFirst('.', '-')}: $value;\n"
-      }
-    }
-    if (obj.containsKey("include")) {
-      val include = obj["include"]!!.jsonPrimitive.content
-      var themePath = "/vscode-themes/$include"
-      var themeContent = CustomResourceHandler::class.java.getResource(themePath)!!.readText()
-      result += convertVsCodeTheme(themeContent, keys)
-    }
-    return result
+    val font = UIManager.getFont("Panel.font")
+    val themeCssName = if (LafManager.getInstance().currentUIThemeLookAndFeel.isDark) "dark" else "light"
+    val themeColors = CustomResourceHandler::class.java.getResource("/vscode-themes/${themeCssName}.css")!!.readText()
+    val scrollbarsStyle = JBCefScrollbarsHelper.buildScrollbarsStyle()
+    return """:root {
+      color: var(--vscode-foreground);
+      --vscode-font-family: "${font.family}", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", "Ubuntu Sans", "Liberation Sans";
+      --vscode-font-size: ${font.size}px;
+      $themeColors
+     }
+     $scrollbarsStyle
+     """
   }
 }
-
-
-
