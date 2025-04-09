@@ -25,6 +25,7 @@ export interface IHulyCode {
   getActiveTextEditor(): vscode.TextEditor | undefined;
   getVisibleTextEditors(): vscode.TextEditor[];
   onDidChangeActiveTextEditor: vscode.Event<vscode.TextEditor | undefined>;
+  onDidSaveTextDocument: vscode.Event<vscode.TextDocument>;
 
   createTerminal(options: any): vscode.Terminal;
 

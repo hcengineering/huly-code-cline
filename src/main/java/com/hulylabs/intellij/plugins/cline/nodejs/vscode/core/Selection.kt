@@ -6,4 +6,20 @@ data class Selection(
   val selectionStartColumn: Int,
   val positionLineNumber: Int,
   val positionColumn: Int,
-)
+) {
+  companion object {
+    fun Any?.smartToInt(): Int {
+      return if (this is Double) (Int.MAX_VALUE / 2) else (this as Int)
+    }
+
+    @JvmStatic
+    fun fromMap(map: Map<String, Any>): Selection {
+      return Selection(
+        map["selectionStartLineNumber"].smartToInt(),
+        map["selectionStartColumn"].smartToInt(),
+        map["positionLineNumber"].smartToInt(),
+        map["positionColumn"].smartToInt(),
+      )
+    }
+  }
+}

@@ -24,6 +24,7 @@ import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.ui.jcef.JBCefBrowser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -48,6 +49,7 @@ class ClineRuntimeService(
   private lateinit var moduleObject: V8ValueObject
   private lateinit var thread: Thread
   private val messageQueue = ArrayBlockingQueue<Pair<V8ValueFunction, String>>(100)
+  private val listenerInvokesChannel = Channel<Pair<V8ValueFunction, Any>>(100)
 
   companion object {
     @JvmStatic
@@ -95,7 +97,7 @@ class ClineRuntimeService(
       try {
         NodeRuntimeOptions.NODE_FLAGS.setIcuDataDir(runtimePath.toString())
         nodeRuntime = V8Host.getNodeI18nInstance().createV8Runtime<NodeRuntime>()
-        val bridge = HulyCodeBridge(project, nodeRuntime)
+        val bridge = HulyCodeBridge(project, nodeRuntime, this)
         val webView = WebviewView(project, nodeRuntime, browser)
         nodeRuntime.logger = logger
         try {
@@ -117,6 +119,15 @@ class ClineRuntimeService(
               val (function, message) = message
               try {
                 moduleObject.invokeVoid("invokeCallback", function, message)
+              }
+              catch (e: JavetException) {
+                e.printStackTrace()
+              }
+            }
+            val pair = listenerInvokesChannel.tryReceive().getOrNull()
+            if (pair != null) {
+              try {
+                pair.first.callVoid(null, pair.second)
               }
               catch (e: JavetException) {
                 e.printStackTrace()
@@ -151,6 +162,10 @@ class ClineRuntimeService(
 
   fun addMessage(onDidReceiveMessageListener: V8ValueFunction, json: String) {
     messageQueue.offer(Pair(onDidReceiveMessageListener, json))
+  }
+
+  fun addInvokesListener(listener: V8ValueFunction, value: Any) {
+    listenerInvokesChannel.trySend(Pair(listener, value))
   }
 
   fun clineAuthResponse(query: String) {

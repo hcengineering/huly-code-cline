@@ -1,24 +1,23 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
-import { Cline } from "../cline/src/core/Cline"
-import { ClineProvider } from "../cline/src/core/webview/ClineProvider"
+import { WebviewProvider } from "../cline/src/core/webview";
 import process from 'process';
 import * as vscode from "vscode"
 import "../cline/src/utils/path" // necessary to have access to String.prototype.toPosix
-import { testDiff } from "./tests/difftest";
+//import { testDiff } from "./tests/difftest";
 
 interface Thenable<T> extends PromiseLike<T> { }
 
 console.log("Loading extension")
 declare var webview: any
 
-var sidebarProvider: ClineProvider
+var sidebarProvider: WebviewProvider
 
 process.on('unhandledRejection', (reason, promise) => {
   console.log("!!!!! ", reason, promise);
 });
 
-export async function activate() {
+export function activate() {
   var context = new vscode.ExtensionContext()
   var outputChannel = {
     name: "Cline",
@@ -32,7 +31,7 @@ export async function activate() {
   }
   try {
     //await testDiff();
-    sidebarProvider = new ClineProvider(context, outputChannel)
+    sidebarProvider = new WebviewProvider(context, outputChannel)
     sidebarProvider.resolveWebviewView(webview)
   } catch (e) {
     console.log(e)
@@ -46,18 +45,18 @@ export function invokeCallback(callback: any, str: string) {
 }
 
 export async function newChat() {
-  await sidebarProvider.clearTask()
-  await sidebarProvider.postStateToWebview()
-  await sidebarProvider.postMessageToWebview({
+  await sidebarProvider.controller.clearTask()
+  await sidebarProvider.controller.postStateToWebview()
+  await sidebarProvider.controller.postMessageToWebview({
     type: "action",
     action: "chatButtonClicked",
   })
 }
 
 export async function handleAuthCallback(state: string, token: string, apiKey: string) {
-  if (!(await sidebarProvider.validateAuthState(state))) {
+  if (!(await sidebarProvider.controller.validateAuthState(state))) {
     vscode.window.showErrorMessage("Invalid auth state")
     return
   }
-  await sidebarProvider.handleAuthCallback(token, apiKey)
+  await sidebarProvider.controller.handleAuthCallback(token, apiKey)
 }

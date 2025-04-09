@@ -4,19 +4,16 @@ package com.hulylabs.intellij.plugins.cline.nodejs
 import com.caoccao.javet.interop.NodeRuntime
 import com.caoccao.javet.values.V8Value
 import com.caoccao.javet.values.reference.V8ValueFunction
-import com.hulylabs.intellij.plugins.cline.settings.ClineConfiguration
 import com.hulylabs.intellij.plugins.cline.nodejs.vscode.Extension
 import com.hulylabs.intellij.plugins.cline.nodejs.vscode.FileDiagnostic
 import com.hulylabs.intellij.plugins.cline.nodejs.vscode.Tab
 import com.hulylabs.intellij.plugins.cline.nodejs.vscode.VsCodeDiagnostic
 import com.hulylabs.intellij.plugins.cline.nodejs.vscode.core.*
-import com.hulylabs.intellij.plugins.cline.nodejs.vscode.editor.DiffTextEditor
+import com.hulylabs.intellij.plugins.cline.nodejs.vscode.editor.*
 import com.hulylabs.intellij.plugins.cline.nodejs.vscode.editor.EditorUtils.getQueueContent
-import com.hulylabs.intellij.plugins.cline.nodejs.vscode.editor.TextDocument
-import com.hulylabs.intellij.plugins.cline.nodejs.vscode.editor.TextEditor
-import com.hulylabs.intellij.plugins.cline.nodejs.vscode.editor.WorkspaceEdit
 import com.hulylabs.intellij.plugins.cline.nodejs.vscode.terminal.Terminal
 import com.hulylabs.intellij.plugins.cline.nodejs.vscode.terminal.TerminalOptions
+import com.hulylabs.intellij.plugins.cline.settings.ClineConfiguration
 import com.intellij.credentialStore.CredentialAttributes
 import com.intellij.credentialStore.Credentials
 import com.intellij.credentialStore.generateServiceName
@@ -53,6 +50,10 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileManager
+import com.intellij.openapi.vfs.newvfs.BulkFileListener
+import com.intellij.openapi.vfs.newvfs.events.VFileContentChangeEvent
+import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.openapi.vfs.readText
 import com.intellij.openapi.wm.ToolWindowId
 import com.intellij.openapi.wm.ToolWindowManager
@@ -74,6 +75,7 @@ class HulyCodeBridge
 internal constructor(
   private val project: Project,
   private val nodeRuntime: NodeRuntime,
+  private var service: ClineRuntimeService,
 ) : Disposable {
 
   private val scope = MainScope().plus(CoroutineName("HulyCodeBridge"))
@@ -93,7 +95,7 @@ internal constructor(
 
   fun getPluginVersion(): String {
     // TODO: Don`t forget to update this version according to Cline version or move it to properties file
-    return "3.8.3"
+    return "3.9.2"
   }
 
   fun log(message: String?) {
@@ -115,7 +117,7 @@ internal constructor(
     val result = CompletableFuture<String?>()
     passwordSafe.getAsync(attributes).onSuccess { password ->
       result.complete(password?.password.toString())
-    }.onError {  error ->
+    }.onError { error ->
       LOG.error("getSecret error", error)
       result.completeExceptionally(error)
     }
@@ -271,7 +273,27 @@ internal constructor(
           else {
             nodeEditor = toNodeEditor(editor)
           }
-          listener.callVoid(null, nodeEditor)
+          if (nodeEditor != null) {
+            service.addInvokesListener(listener, nodeEditor)
+          }
+        }
+      }
+    })
+    return disposable
+  }
+
+  fun onDidSaveTextDocument(listener: V8ValueFunction): JsDisposable {
+    LOG.info("onDidSaveTextDocument")
+    val disposable = JsDisposable(listener, Disposer.newDisposable())
+    listener.setWeak()
+    nodeRuntime.globalObject.set("onDidSaveTextDocument${listener.hashCode()}", listener)
+
+    ApplicationManager.getApplication().messageBus.connect(disposable.disposable!!).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
+      override fun after(events: List<VFileEvent>) {
+        for (event in events) {
+          if (event is VFileContentChangeEvent) {
+            service.addInvokesListener(listener, UriDocument(Uri(event.file.path)))
+          }
         }
       }
     })
@@ -364,7 +386,8 @@ internal constructor(
       val workspaceEdit = WorkspaceEdit.fromMap(edit)
       activeDiffEditor?.applyEdit(workspaceEdit)
       return ThenableBuilder.createCompleted(nodeRuntime, nodeRuntime.createV8ValueBoolean(true))
-    } catch (e: Exception) {
+    }
+    catch (e: Exception) {
       LOG.error(e)
       return ThenableBuilder.createCompleted(nodeRuntime, nodeRuntime.createV8ValueBoolean(false))
     }
@@ -413,10 +436,10 @@ internal constructor(
   fun getDiagnostics(): List<FileDiagnostic> {
     LOG.info("getDiagnostics")
     return diagnostics.entries.map { (file, diagnostics) ->
-        FileDiagnostic(file, diagnostics.map {
-          VsCodeDiagnostic(Range(it.range.start.line, it.range.start.character, it.range.end.line, it.range.end.character, Position(it.range.start.line, it.range.start.character), Position(it.range.end.line, it.range.end.character)), it.message, it.severity.value - 1, it.source)
-        })
-      }
+      FileDiagnostic(file, diagnostics.map {
+        VsCodeDiagnostic(Range(it.range.start.line, it.range.start.character, it.range.end.line, it.range.end.character, Position(it.range.start.line, it.range.start.character), Position(it.range.end.line, it.range.end.character)), it.message, it.severity.value - 1, it.source)
+      })
+    }
   }
 
   fun openExternal(uri: String) {

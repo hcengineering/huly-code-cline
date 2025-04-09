@@ -19,11 +19,9 @@ open class TextEditor(
     return TextDocument(nodeRuntime, editor)
   }
 
-  fun setSelection(selection: Map<String, Any>) {
+  open fun setSelection(selection: Map<String, Any>) {
     LOG.info("setSelection $selection")
-    println("setSelection $selection")
   }
-
 
   fun getOptions(): TextEditorOptions {
     LOG.info("getOptions")

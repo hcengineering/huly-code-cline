@@ -9,6 +9,7 @@ import com.caoccao.javet.values.reference.V8ValueObject;
 import com.hulylabs.intellij.plugins.cline.nodejs.ClineRuntimeService;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.options.ShowSettingsUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.ui.jcef.JBCefBrowser;
@@ -22,6 +23,7 @@ public class WebView implements Disposable {
   private final Project project;
   private final NodeRuntime nodeRuntime;
   private final JBCefBrowser browser;
+  private final Logger LOG = Logger.getInstance("#cline.webView");
   private String html;
   private V8Value options;
   private JBCefJSQuery postMessageQuery;
@@ -114,7 +116,7 @@ public class WebView implements Disposable {
         msgHolder.set(msg);
       }
       catch (JavetException e) {
-        e.printStackTrace();
+        LOG.error(e);
       }
     }
     ApplicationManager.getApplication().invokeLater(() -> {
@@ -135,7 +137,7 @@ public class WebView implements Disposable {
       nodeRuntime.getGlobalObject().set("onDidReceiveMessageListener", listener);
     }
     catch (JavetException e) {
-      e.printStackTrace();
+      LOG.error(e);
     }
   }
 
@@ -151,7 +153,7 @@ public class WebView implements Disposable {
       }
     }
     catch (JavetException e) {
-      e.printStackTrace();
+      LOG.error(e);
     }
   }
 }

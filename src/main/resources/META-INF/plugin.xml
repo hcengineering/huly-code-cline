@@ -15,6 +15,7 @@
   <extensions defaultExtensionNs="com.intellij">
     <toolWindow id="Cline" anchor="left" icon="/icons/panel_icon.svg"
                 factoryClass="com.hulylabs.intellij.plugins.cline.ClineToolWindowFactory"/>
+    <notificationGroup id="Cline" displayType="BALLOON"/>
     <defaultToolWindowLayout
       id="ClineToolWindowLayoutPlatformExtension"
       implementation="com.hulylabs.intellij.plugins.cline.ClineToolWindowLayoutPlatformExtension"

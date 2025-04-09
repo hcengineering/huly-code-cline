@@ -4,13 +4,13 @@ package com.hulylabs.intellij.plugins.cline.nodejs.vscode.editor
 import com.caoccao.javet.interop.NodeRuntime
 import com.hulylabs.intellij.plugins.cline.nodejs.vscode.core.Position
 import com.hulylabs.intellij.plugins.cline.nodejs.vscode.core.Range
+import com.hulylabs.intellij.plugins.cline.nodejs.vscode.core.Selection
 import com.intellij.diff.editor.DiffEditorViewerFileEditor
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.ScrollType
-import com.intellij.openapi.editor.markup.RangeHighlighter
 import com.intellij.openapi.project.Project
 import kotlinx.coroutines.*
 
@@ -22,11 +22,25 @@ class DiffTextEditor(
   private val editor: DiffEditorViewerFileEditor,
 ) : TextEditor(nodeRuntime, editor) {
   val scope = MainScope().plus(CoroutineName("DiffTextEditor"))
-  val highlights = mutableMapOf<Range, RangeHighlighter>()
 
   override fun getDocument(): TextDocument {
     LOG.info("getDiffDocument")
     return DiffTextDocument(project, nodeRuntime, editor)
+  }
+
+  override fun setSelection(map: Map<String, Any>) {
+    val selection = Selection.fromMap(map)
+    LOG.debug("setSelection $selection")
+    scope.launch {
+      withContext(Dispatchers.EDT) {
+        for (editor in editor.getEmbeddedEditors()) {
+          val document = editor.document
+          val startOffset = document.offset(Position(selection.selectionStartLineNumber, selection.selectionStartColumn))
+          val endOffset = document.offset(Position(selection.positionLineNumber, selection.positionColumn))
+          editor.selectionModel.setSelection(startOffset, endOffset)
+        }
+      }
+    }
   }
 
   fun Document.offset(position: Position): Int {
@@ -41,7 +55,7 @@ class DiffTextEditor(
   }
 
   fun applyEdit(edit: WorkspaceEdit) {
-    LOG.info("applyEdit $edit")
+    LOG.trace("applyEdit $edit")
     WriteCommandAction.writeCommandAction(project).run<Exception> {
       val document = editor.getEmbeddedEditors().last().document
       if (edit.newText != null) {
@@ -56,7 +70,7 @@ class DiffTextEditor(
   override fun setDecorations(decorationType: Map<String, Any>, rangesOrOptions: List<Map<String, Any>>) {
     val ranges = rangesOrOptions.map { Range.fromMap(it) }
     var isFaded = decorationType["key"] as String? == "faded"
-    LOG.info("setDecorations $isFaded $ranges")
+    LOG.debug("setDecorations $isFaded $ranges")
     // TODO: implement custom decorations
     //for (editor in editor.getEmbeddedEditors()) {
     //  val document = editor.document
@@ -66,7 +80,7 @@ class DiffTextEditor(
     //        document.offset(range.start), document.offset(range.end),
     //        HighlighterLayer.SELECTION - 1,
     //        TextAttributes(JBColor.GRAY.darker(), null, null, null, 0),
-    //        EXACT_RANGE
+    //        HighlighterTargetArea.EXACT_RANGE
     //      )
     //    } else {
     //      highlights[range]?.let {
@@ -78,13 +92,13 @@ class DiffTextEditor(
   }
 
   override fun revealRange(range: Map<String, Any>, revealType: Int?) {
-    LOG.info("revealRange $range")
+    LOG.debug("revealRange $range")
     val editor = editor.getEmbeddedEditors().last()
     val document = editor.document
     val range = Range.fromMap(range)
     scope.launch {
       withContext(Dispatchers.EDT) {
-        editor.getScrollingModel().scrollTo(editor.offsetToLogicalPosition(document.offset(range.start)), ScrollType.MAKE_VISIBLE);
+        editor.getScrollingModel().scrollTo(editor.offsetToLogicalPosition(document.offset(range.start)), ScrollType.MAKE_VISIBLE)
       }
     }
   }

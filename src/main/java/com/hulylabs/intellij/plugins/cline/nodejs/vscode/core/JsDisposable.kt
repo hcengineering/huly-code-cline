@@ -15,7 +15,6 @@ class JsDisposable(
     if (value?.isClosed != true) {
       value?.close(true)
     }
-    println("JsDisposable.dispose")
     disposable?.let {
       Disposer.dispose(disposable)
     }

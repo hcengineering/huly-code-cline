@@ -970,7 +970,17 @@ export namespace workspace {
 
   // export const onDidChangeWorkspaceFolders: Event<WorkspaceFoldersChangeEvent>;
 
-  // export function getWorkspaceFolder(uri: Uri): WorkspaceFolder | undefined;
+  export function getWorkspaceFolder(uri: Uri): WorkspaceFolder | undefined {
+    const folders = hulyCode.workspaceFolders();
+    if (folders && folders.length > 0) {
+      return {
+        uri: Uri.file(folders[0]),
+        name: folders[0],
+        index: 0,
+      }
+    }
+    return undefined;
+  }
 
   // export function asRelativePath(pathOrUri: string | Uri, includeWorkspaceFolder?: boolean): string;
 
@@ -1019,7 +1029,7 @@ export namespace workspace {
 
   // export const onWillSaveTextDocument: Event<TextDocumentWillSaveEvent>;
 
-  export const onDidSaveTextDocument: Event<TextDocument> = new EventEmitter<TextDocument>().event;
+  export const onDidSaveTextDocument: Event<TextDocument> = hulyCode.onDidSaveTextDocument;
 
   // export const notebookDocuments: readonly NotebookDocument[];
 
